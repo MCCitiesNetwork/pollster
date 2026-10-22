@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.api.condition.ConditionParseException;
 import com.minecraftcitiesnetwork.pollster.api.condition.ConditionParser;
 import com.minecraftcitiesnetwork.pollster.api.model.Option;
@@ -93,14 +94,15 @@ public final class QuestionEditScreen {
         Screen.Builder b = Screen.builder(ui.style().title("Question: " + AdminSupport.truncate(q.key(), 30)));
         b.body(Component.text("Questions are locked once a survey has been opened.", NamedTextColor.GRAY));
         b.body(ui.style().label("Key", Component.text(q.key())));
-        b.body(ui.style().label("Text", Component.text(q.text())));
+        b.body(ui.style().label("Text", StaffText.render(q.text())));
         b.body(ui.style().label("Type", Component.text(q.type().name())));
         b.body(ui.style().label("Required", Component.text(q.required() ? "yes" : "no")));
         if (q.type() == QuestionType.MULTIPLE) {
             b.body(ui.style().label("Selections", Component.text(q.min() + " to " + q.effectiveMax())));
         }
         for (Option option : q.options()) {
-            b.body(Component.text("• " + option.key() + ": " + option.label(), NamedTextColor.GRAY));
+            b.body(Component.text("• " + option.key() + ": ", NamedTextColor.GRAY)
+                    .append(StaffText.render(option.label())));
         }
         b.body(ui.style().label("Condition", Component.text(q.showIf() == null ? "none" : q.showIf())));
         b.button(Button.of(ui.style().secondary("Back"), ctx -> ctx.open(QuestionListScreen.create(ui, s))));

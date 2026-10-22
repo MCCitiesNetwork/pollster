@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.SurveyService.SurveyLock;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyIds;
@@ -53,7 +54,8 @@ public final class HubScreen {
                                          int responses) {
         String id = s.id();
         boolean draft = s.status() == SurveyStatus.DRAFT;
-        Screen.Builder b = Screen.builder(ui.style().title("Survey: " + AdminSupport.truncate(s.name(), 40)));
+        Screen.Builder b = Screen.builder(ui.style().title(Component.text("Survey: ")
+                .append(StaffText.render(AdminSupport.truncate(s.name(), 40)))));
         b.body(ui.style().label("Id", Component.text(id)));
         b.body(ui.style().label("Status", Component.text(s.status().name())));
         b.body(ui.style().label("Responses", Component.text(responses)));

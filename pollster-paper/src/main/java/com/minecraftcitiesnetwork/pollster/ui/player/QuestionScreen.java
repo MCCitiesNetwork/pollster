@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
 import com.minecraftcitiesnetwork.pollster.api.flow.Answer;
 import com.minecraftcitiesnetwork.pollster.api.flow.AnswerResult;
@@ -59,7 +60,7 @@ public final class QuestionScreen {
         builder.body(ui.messages().messageFor(MessageKeys.SURVEY_QUESTION_HEADER,
                 MessageContainer.value("position", Integer.toString(flow.position())),
                 MessageContainer.value("total", Integer.toString(flow.visibleCount()))));
-        builder.body(Component.text(question.text(), NamedTextColor.WHITE));
+        builder.body(StaffText.render(question.text()).colorIfAbsent(NamedTextColor.WHITE));
 
         Optional<Answer> existing = flow.answerFor(question.key());
         switch (question.type()) {
@@ -69,8 +70,9 @@ public final class QuestionScreen {
                         .map(a -> ((Answer.Choice) a).optionKey()).orElse(null);
                 for (Option option : question.options()) {
                     Component label = option.key().equals(chosen)
-                            ? Component.text("✔ " + option.label(), NamedTextColor.GREEN)
-                            : Component.text(option.label(), NamedTextColor.WHITE);
+                            ? Component.text("✔ ", NamedTextColor.GREEN)
+                                    .append(StaffText.render(option.label()).colorIfAbsent(NamedTextColor.GREEN))
+                            : StaffText.render(option.label()).colorIfAbsent(NamedTextColor.WHITE);
                     builder.button(Button.of(label, ctx -> submit(ui, session, ctx, step,
                             new Answer.Choice(option.key()), null)));
                 }
@@ -89,7 +91,7 @@ public final class QuestionScreen {
                 List<Option> options = question.options();
                 for (int i = 0; i < options.size(); i++) {
                     Option option = options.get(i);
-                    builder.input(new Input.BoolInput(OPTION_PREFIX + i, Component.text(option.label()),
+                    builder.input(new Input.BoolInput(OPTION_PREFIX + i, StaffText.render(option.label()),
                             selected.contains(option.key())));
                 }
                 builder.button(Button.of(ui.style().primary("Next"), ctx -> {

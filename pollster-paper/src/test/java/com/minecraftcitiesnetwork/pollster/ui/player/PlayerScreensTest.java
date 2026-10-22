@@ -309,16 +309,70 @@ class PlayerScreensTest {
     }
 
     @Test
-    void review_adminTextShownLiterally() {
+    void review_staffTextRendersRestrictedMiniMessage() {
         SurveyDefinition s = open("rev-two", new com.minecraftcitiesnetwork.pollster.api.model.Question("k",
                 com.minecraftcitiesnetwork.pollster.api.model.QuestionType.SINGLE, "Q <red>text",
                 List.of(new com.minecraftcitiesnetwork.pollster.api.model.Option("a", "<bold>Label")),
                 true, 0, 0, null));
         PlayerSession session = this.t.start(s, false);
         session.flow().answer(new Answer.Choice("a"));
-        String shown = body(ReviewScreen.create(this.t.ui, session));
-        assertTrue(shown.contains("Q <red>text"));
-        assertTrue(shown.contains("<bold>Label"));
+        Screen screen = ReviewScreen.create(this.t.ui, session);
+        String shown = body(screen);
+        // Question text and option labels are staff-written MiniMessage: colours and decorations apply.
+        assertTrue(shown.contains("Q text"), shown);
+        assertFalse(shown.contains("<red>"), shown);
+        assertTrue(shown.contains("Label"), shown);
+        assertFalse(shown.contains("<bold>"), shown);
+        assertTrue(screen.body().stream().anyMatch(c -> hasStyle(c,
+                n -> net.kyori.adventure.text.format.NamedTextColor.RED.equals(n.color()))));
+        assertTrue(screen.body().stream().anyMatch(c -> hasStyle(c,
+                n -> n.decoration(net.kyori.adventure.text.format.TextDecoration.BOLD)
+                        == net.kyori.adventure.text.format.TextDecoration.State.TRUE)));
+    }
+
+    @Test
+    void question_clickTagInStaffTextIsNotInteractive() {
+        String hostile = "<click:run_command:/op me><hover:show_text:'x'>Agree?";
+        SurveyDefinition s = open("click-one", new com.minecraftcitiesnetwork.pollster.api.model.Question("k",
+                com.minecraftcitiesnetwork.pollster.api.model.QuestionType.SINGLE, hostile,
+                List.of(new com.minecraftcitiesnetwork.pollster.api.model.Option("a", hostile),
+                        new com.minecraftcitiesnetwork.pollster.api.model.Option("b", "B")),
+                true, 0, 0, null));
+        PlayerSession session = this.t.start(s, false);
+        Screen screen = QuestionScreen.create(this.t.ui, session, null);
+        List<net.kyori.adventure.text.Component> shown = new java.util.ArrayList<>(screen.body());
+        screen.buttons().forEach(b -> shown.add(b.label()));
+        shown.add(screen.title());
+        for (net.kyori.adventure.text.Component c : shown) {
+            assertFalse(hasStyle(c, n -> n.clickEvent() != null || n.hoverEvent() != null), plain(c));
+        }
+        assertTrue(body(screen).contains("Agree?"));
+    }
+
+    @Test
+    void intro_staffNameAndDescriptionRenderWithoutClicks() {
+        SurveyDefinition s = this.t.add(new SurveyDefinition("name-one", "<green>Green <click:run_command:/op me>x",
+                "<italic>About", SurveyStatus.OPEN, true, false, false, List.of(),
+                List.of(single("q", 2, true))));
+        Screen screen = IntroScreen.create(this.t.ui, s, false);
+        assertTrue(plain(screen.title()).contains("Green"));
+        assertFalse(plain(screen.title()).contains("<green>"));
+        assertFalse(hasStyle(screen.title(), n -> n.clickEvent() != null));
+        assertTrue(body(screen).contains("About"));
+        assertFalse(body(screen).contains("<italic>"));
+    }
+
+    private static boolean hasStyle(net.kyori.adventure.text.Component component,
+                                    java.util.function.Predicate<net.kyori.adventure.text.Component> test) {
+        if (test.test(component)) {
+            return true;
+        }
+        for (net.kyori.adventure.text.Component child : component.children()) {
+            if (hasStyle(child, test)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // --- submit -------------------------------------------------------------------------

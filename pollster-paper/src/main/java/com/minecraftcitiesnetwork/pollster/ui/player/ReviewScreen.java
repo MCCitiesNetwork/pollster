@@ -1,5 +1,7 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
+import net.kyori.adventure.text.JoinConfiguration;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.api.event.SurveyCompletedEvent;
 import com.minecraftcitiesnetwork.pollster.api.event.SurveySubmitEvent;
 import com.minecraftcitiesnetwork.pollster.api.flow.Answer;
@@ -21,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /** Lists every shown question with the answer given, then Submit, Back or Cancel. */
 public final class ReviewScreen {
@@ -41,9 +42,10 @@ public final class ReviewScreen {
             if (question.isEmpty()) {
                 continue;
             }
-            // Question text and answers are inserted as components, never parsed, so markup typed
-            // by an admin or a player shows up literally.
-            builder.body(ui.style().label(question.get().text(), describe(ui, question.get(), entry.getValue())));
+            // Question text and option labels are staff text (restricted markup); a player's typed
+            // answer is never parsed, so markup in it shows up literally.
+            builder.body(ui.style().label(StaffText.render(question.get().text()),
+                    describe(ui, question.get(), entry.getValue())));
         }
         builder.button(new Button(ui.style().primary("Submit"), null, BUTTON_WIDTH, ctx -> submit(ui, session, ctx)));
         builder.button(new Button(ui.style().secondary("Back"), null, BUTTON_WIDTH, ctx ->
@@ -63,21 +65,21 @@ public final class ReviewScreen {
 
     private static Component describe(PlayerUi ui, Question question, Answer answer) {
         return switch (answer) {
-            case Answer.Choice choice -> Component.text(labelOf(question, choice.optionKey()));
-            case Answer.Choices choices -> Component.text(choices.optionKeys().stream()
-                    .map(key -> labelOf(question, key)).collect(Collectors.joining(", ")));
+            case Answer.Choice choice -> labelOf(question, choice.optionKey());
+            case Answer.Choices choices -> Component.join(JoinConfiguration.commas(true),
+                    choices.optionKeys().stream().map(key -> labelOf(question, key)).toList());
             case Answer.Text text -> Component.text(text.value());
             case Answer.Skipped skipped -> ui.messages().messageFor(MessageKeys.SURVEY_REVIEW_SKIPPED);
         };
     }
 
-    private static String labelOf(Question question, String key) {
+    private static Component labelOf(Question question, String key) {
         for (Option option : question.options()) {
             if (option.key().equals(key)) {
-                return option.label();
+                return StaffText.render(option.label());
             }
         }
-        return key;
+        return Component.text(key);
     }
 
     private static void submit(PlayerUi ui, PlayerSession session, ScreenContext ctx) {

@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import com.minecraftcitiesnetwork.pollster.ui.Button;
@@ -30,13 +31,14 @@ public final class SurveyListScreen {
             if (completed.contains(survey.id())) {
                 // The dialog has no disabled buttons, so a completed survey is gray and does nothing.
                 builder.button(Button.of(
-                        Component.text(survey.name() + " - Completed", NamedTextColor.GRAY), ctx -> { }));
+                        StaffText.render(survey.name()).append(Component.text(" - Completed"))
+                                .colorIfAbsent(NamedTextColor.GRAY), ctx -> { }));
                 continue;
             }
             Component state = inProgress.contains(survey.id())
                     ? Component.text(" - In progress", NamedTextColor.YELLOW)
                     : Component.text(" - New", NamedTextColor.GREEN);
-            builder.button(Button.of(Component.text(survey.name(), NamedTextColor.WHITE).append(state), ctx -> {
+            builder.button(Button.of(StaffText.render(survey.name()).colorIfAbsent(NamedTextColor.WHITE).append(state), ctx -> {
                 if (!PlayerScreens.available(ui, survey.id(), false)) {
                     ui.sounds().error(ctx.player());
                     ctx.open(PlayerScreens.unavailable(ui));

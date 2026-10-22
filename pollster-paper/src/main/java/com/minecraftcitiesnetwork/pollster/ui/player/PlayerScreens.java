@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.SurveyService;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
@@ -21,9 +22,9 @@ final class PlayerScreens {
     private PlayerScreens() {
     }
 
-    /** The survey name as title; previews carry a visible marker. Names are never parsed as markup. */
+    /** The survey name as title; previews carry a visible marker. Names are staff text (restricted markup). */
     static @NotNull Component title(@NotNull PlayerUi ui, @NotNull SurveyDefinition survey, boolean preview) {
-        Component title = ui.style().title(survey.name());
+        Component title = ui.style().title(StaffText.render(survey.name()));
         return preview ? title.append(ui.messages().messageFor(MessageKeys.SURVEY_PREVIEW_MARKER)) : title;
     }
 

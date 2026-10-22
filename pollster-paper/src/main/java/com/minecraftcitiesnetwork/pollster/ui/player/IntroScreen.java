@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
 import com.minecraftcitiesnetwork.pollster.api.event.SurveyStartEvent;
 import com.minecraftcitiesnetwork.pollster.api.flow.SurveyFlow;
@@ -33,7 +34,7 @@ public final class IntroScreen {
                                          boolean preview) {
         Screen.Builder builder = Screen.builder(PlayerScreens.title(ui, survey, preview));
         if (!survey.description().isBlank()) {
-            builder.body(Component.text(survey.description(), NamedTextColor.WHITE));
+            builder.body(StaffText.render(survey.description()).colorIfAbsent(NamedTextColor.WHITE));
         }
         builder.body(ui.messages().messageFor(MessageKeys.SURVEY_INTRO_QUESTIONS,
                 MessageContainer.value("count", Integer.toString(survey.questions().size()))));

@@ -70,6 +70,7 @@ class CreateWizardTest {
         assertFalse(s.featured());
         assertTrue(s.requiresPermission());
         assertTrue(s.questions().isEmpty());
-        assertTrue(plain(ctx.last()).contains("New <b>Poll</b>"), plain(ctx.last()));
+        // The name is staff text: the hub renders its formatting rather than showing the tags.
+        assertTrue(plain(ctx.last()).contains("Survey: New Poll"), plain(ctx.last()));
     }
 }

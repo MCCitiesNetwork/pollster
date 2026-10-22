@@ -10,8 +10,9 @@ import java.util.function.Supplier;
 
 /**
  * Dialog text styles. Each style is a MiniMessage template under {@code ui.style.*} with a
- * {@code <text>} tag, so server owners can recolour dialogs in messages.yml. Text is always
- * inserted unparsed, so survey names and player input cannot inject markup.
+ * {@code <text>} tag, so server owners can recolour dialogs in messages.yml. String text is always
+ * inserted unparsed, so player input cannot inject markup; staff text arrives as a component
+ * already rendered by {@link StaffText}.
  */
 public final class Style {
 
@@ -62,6 +63,11 @@ public final class Style {
         return render(TITLE, text);
     }
 
+    /** A title whose text is already a component (staff-written text rendered by {@link StaffText}). */
+    public @NotNull Component title(@NotNull Component text) {
+        return renderMarkup(TITLE, text, Component.empty());
+    }
+
     /** Destructive actions and confirmation titles. */
     public @NotNull Component danger(@NotNull String text) {
         return render(DANGER, text);
@@ -83,6 +89,11 @@ public final class Style {
 
     public @NotNull Component label(@NotNull String text, @NotNull Component value) {
         return renderWith(LABEL, text, value);
+    }
+
+    /** A label whose text is already a component (staff-written text rendered by {@link StaffText}). */
+    public @NotNull Component label(@NotNull Component text, @NotNull Component value) {
+        return renderMarkup(LABEL, text, value);
     }
 
     public @NotNull Component error(@NotNull String text) {
@@ -107,5 +118,11 @@ public final class Style {
         MessageContainer current = this.messages.get();
         MessageContainer source = current.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : current;
         return source.messageFor(key, MessageContainer.value("text", text), MessageContainer.markup("value", value));
+    }
+
+    private @NotNull Component renderMarkup(@NotNull String key, @NotNull Component text, @NotNull Component value) {
+        MessageContainer current = this.messages.get();
+        MessageContainer source = current.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : current;
+        return source.messageFor(key, MessageContainer.markup("text", text), MessageContainer.markup("value", value));
     }
 }
