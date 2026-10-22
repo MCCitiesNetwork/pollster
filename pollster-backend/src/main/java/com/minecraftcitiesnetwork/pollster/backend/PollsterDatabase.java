@@ -1,5 +1,9 @@
 package com.minecraftcitiesnetwork.pollster.backend;
 
+import com.minecraftcitiesnetwork.pollster.backend.mapper.AnswerMapper;
+import com.minecraftcitiesnetwork.pollster.backend.mapper.PlayerStateMapper;
+import com.minecraftcitiesnetwork.pollster.backend.mapper.ResponseMapper;
+import com.minecraftcitiesnetwork.pollster.backend.mapper.SurveyStateMapper;
 import org.apache.ibatis.datasource.pooled.PooledDataSource;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
@@ -72,7 +76,10 @@ public final class PollsterDatabase implements AutoCloseable {
         Environment environment = new Environment("production", new JdbcTransactionFactory(), dataSource);
         Configuration configuration = new Configuration(environment);
         configuration.getTypeHandlerRegistry().register(UUID.class, JdbcType.OTHER, UuidBinaryTypeHandler.class);
-        // Mappers are registered here as they are added.
+        configuration.addMapper(SurveyStateMapper.class);
+        configuration.addMapper(ResponseMapper.class);
+        configuration.addMapper(AnswerMapper.class);
+        configuration.addMapper(PlayerStateMapper.class);
         return new SqlSessionFactoryBuilder().build(configuration);
     }
 
