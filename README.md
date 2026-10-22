@@ -12,7 +12,7 @@ Results can be published as a link to a static web page. See
 
 - Paper 26.3 or later
 - Java 25
-- MariaDB (or MySQL)
+- MariaDB 10.5+ or MySQL 8+
 
 ## Build
 
