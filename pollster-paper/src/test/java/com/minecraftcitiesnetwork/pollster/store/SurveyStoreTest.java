@@ -93,6 +93,18 @@ class SurveyStoreTest {
     }
 
     @Test
+    void loadAll_failureReasonsDropEmptyPathPrefix() throws Exception {
+        for (String name : List.of("bad-yaml.yml", "unknown-type.yml", "dup-keys.yml")) {
+            Files.copy(fixture(name), this.dir.resolve(name));
+        }
+        LoadReport report = store().loadAll();
+        for (String reason : report.failures().values()) {
+            assertFalse(reason.contains("[]: "), reason);
+            assertFalse(reason.isBlank());
+        }
+    }
+
+    @Test
     void loadAll_rejectsFileNameNotMatchingSlug() throws Exception {
         Files.copy(fixture("Bad Name.yml"), this.dir.resolve("Bad Name.yml"));
         LoadReport report = store().loadAll();

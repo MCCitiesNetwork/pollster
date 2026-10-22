@@ -99,10 +99,16 @@ public final class SurveyStore {
         }
         // Configurate wraps parser errors in a generic message; the cause says what is actually wrong.
         if (e.getCause() != null && e.getCause().getMessage() != null) {
-            message = "invalid YAML: " + e.getCause().getMessage();
+            message = "invalid YAML: " + withoutEmptyPath(e.getCause().getMessage());
         }
+        message = withoutEmptyPath(message);
         // Configurate messages can span several lines (with a source excerpt); keep the log to one line.
         return message.replaceAll("\\s*\\R\\s*", " ").trim();
+    }
+
+    /** Configurate prefixes errors with the node path; at the root that is a meaningless "[]: ". */
+    private static String withoutEmptyPath(String message) {
+        return message.startsWith("[]: ") ? message.substring(4) : message;
     }
 
     private static YamlConfigurationLoader loader(Path file) {
