@@ -1,21 +1,24 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
-import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.SurveyService.SurveyLock;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyIds;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
+import com.minecraftcitiesnetwork.pollster.command.ReportCommands;
 import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Input;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.Screens;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.ui.common.ConfirmScreen;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -87,7 +90,7 @@ public final class HubScreen {
                 ctx -> toggle(ui, ctx, id, false, fresh -> copy(fresh, fresh.name(), fresh.description(),
                         fresh.anonymous(), fresh.featured(), !fresh.requiresPermission()))));
         b.button(Button.of(ui.style().edit("Preview"), ctx -> preview(ui, ctx, id)));
-        b.button(Button.of(ui.style().edit("Report"), ctx -> ui.report().open(ctx.player(), id)));
+        b.button(Button.of(ui.style().edit("Report"), ctx -> openReport(ui, ctx, id)));
         b.button(switch (s.status()) {
             case DRAFT -> Button.of(ui.style().primary("Open survey"), ctx -> openSurvey(ui, ctx, id));
             case OPEN -> Button.of(ui.style().danger("Close survey"), ctx -> closeSurvey(ui, ctx, id));
@@ -100,6 +103,16 @@ public final class HubScreen {
     }
 
     // --- actions ---------------------------------------------------------------------------
+
+    /** The editor needs pollster.admin, but reports have their own node, as the command does. */
+    private static void openReport(AdminUi ui, ScreenContext ctx, String id) {
+        if (!ctx.player().hasPermission(ReportCommands.PERMISSION)) {
+            ctx.open(Screens.error(ui.style(), ui.messages().messageFor(MessageKeys.ERRORS_NO_PERMISSION),
+                    List.of(), back -> open(ui, back, id)));
+            return;
+        }
+        ui.report().open(ctx.player(), id);
+    }
 
     private static void current(AdminUi ui, ScreenContext ctx, String id, Consumer<SurveyDefinition> action) {
         ui.service().survey(id).ifPresentOrElse(action,

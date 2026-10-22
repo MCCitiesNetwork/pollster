@@ -24,6 +24,8 @@ public final class MessageKeys {
 
     /** Shown for any stale dialog button: survey closed, reloaded, deleted, or session ended. */
     public static final String SURVEY_UNAVAILABLE = "errors.survey-unavailable";
+    /** A dialog button the player lacks the permission for. */
+    public static final String ERRORS_NO_PERMISSION = "errors.no-permission";
 
     public static final String PUBLISH_SUCCESS = "publish.success";
     public static final String PUBLISH_FAILED = "publish.failed";
