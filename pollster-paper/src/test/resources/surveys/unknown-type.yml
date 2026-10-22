@@ -1,0 +1,6 @@
+name: "Unknown"
+status: OPEN
+questions:
+  - key: color
+    type: RANKED
+    text: "Rank the colours"

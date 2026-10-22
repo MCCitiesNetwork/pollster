@@ -1,0 +1,4 @@
+name: "Bad"
+questions:
+	- key: [oops
+		garbage: : :

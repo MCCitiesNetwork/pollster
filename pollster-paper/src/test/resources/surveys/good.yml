@@ -1,0 +1,15 @@
+name: "Good"
+description: "A fine survey."
+status: OPEN
+anonymous: true
+featured: false
+requires-permission: false
+rewards:
+  - message: "<green>Thanks!"
+questions:
+  - key: color
+    type: SINGLE
+    text: "Favourite colour?"
+    options:
+      - { key: red, label: "Red" }
+      - { key: blue, label: "Blue" }

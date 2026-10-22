@@ -1,0 +1,7 @@
+name: "Dup"
+status: OPEN
+status: CLOSED
+questions:
+  - key: a
+    type: TEXT
+    text: "One"
