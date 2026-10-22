@@ -350,4 +350,35 @@ class SurveyServiceTest {
         this.service.refreshLocks().join();
         assertFalse(this.service.report("poll-one").join().survey().anonymous());
     }
+
+    // ---- visibleTo ---------------------------------------------------------------------------
+
+    private void openedAs(SurveyDefinition survey, String hash) {
+        when(this.backend.state(survey.id())).thenReturn(Optional.of(
+                new SurveyStateRecord(survey.id(), hash, Instant.now(), null)));
+    }
+
+    @Test
+    void visibleTo_onlyOpenUnlockedAndPermitted() throws Exception {
+        SurveyDefinition open = saved("poll-open", SurveyStatus.OPEN);
+        openedAs(open, ContentHash.of(open));
+        SurveyDefinition closed = saved("poll-closed", SurveyStatus.CLOSED);
+        openedAs(closed, ContentHash.of(closed));
+        saved("poll-draft", SurveyStatus.DRAFT);
+        SurveyDefinition locked = saved("poll-locked", SurveyStatus.OPEN);
+        openedAs(locked, "stale-hash");
+        SurveyDefinition gated = new SurveyDefinition("poll-gated", "Name", "Desc", SurveyStatus.OPEN, false,
+                false, true, List.of(), open.questions());
+        this.store.save(gated);
+        openedAs(gated, ContentHash.of(gated));
+        this.service.refreshLocks().join();
+
+        org.bukkit.entity.Player without = mock(org.bukkit.entity.Player.class);
+        assertEquals(List.of("poll-open"), this.service.visibleTo(without).stream().map(SurveyDefinition::id).toList());
+
+        org.bukkit.entity.Player with = mock(org.bukkit.entity.Player.class);
+        when(with.hasPermission("pollster.survey.poll-gated")).thenReturn(true);
+        assertEquals(List.of("poll-gated", "poll-open"),
+                this.service.visibleTo(with).stream().map(SurveyDefinition::id).toList());
+    }
 }
