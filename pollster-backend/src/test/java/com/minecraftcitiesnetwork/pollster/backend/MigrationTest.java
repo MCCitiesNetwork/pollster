@@ -41,6 +41,22 @@ class MigrationTest extends AbstractDatabaseTest {
     }
 
     @Test
+    void migrate_responsesStoreNoPlayerName() throws SQLException {
+        Set<String> columns = new TreeSet<>();
+        try (Connection connection = database.dataSource().getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(
+                     "SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE()"
+                             + " AND table_name = 'pollster_responses'")) {
+            while (rs.next()) {
+                columns.add(rs.getString(1));
+            }
+        }
+        // Only the UUID identifies a player; names are looked up when a report is built.
+        assertEquals(Set.of("id", "survey_id", "player_uuid", "started_at", "submitted_at"), columns);
+    }
+
+    @Test
     void migrate_isIdempotent() throws SQLException {
         try (PollsterDatabase second = PollsterDatabase.open(settings(), Logger.getLogger("test"));
              Connection connection = second.dataSource().getConnection()) {

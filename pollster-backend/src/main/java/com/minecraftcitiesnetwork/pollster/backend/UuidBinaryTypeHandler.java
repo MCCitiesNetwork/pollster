@@ -22,7 +22,7 @@ public class UuidBinaryTypeHandler extends BaseTypeHandler<UUID> {
                 .array();
     }
 
-    private static UUID fromBytes(byte[] bytes) {
+    static UUID fromBytes(byte[] bytes) {
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         return new UUID(buffer.getLong(), buffer.getLong());
     }

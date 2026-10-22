@@ -27,9 +27,11 @@ class ReportDataTest extends AbstractDatabaseTest {
         this.backend.open("s", HASH, NOW);
     }
 
-    private void submit(long seconds, AnswerRowInput... answers) {
-        this.backend.submit(new ResponseSubmission("s", HASH, UUID.randomUUID(), "Steve",
+    private UUID submit(long seconds, AnswerRowInput... answers) {
+        UUID player = UUID.randomUUID();
+        this.backend.submit(new ResponseSubmission("s", HASH, player,
                 NOW.minusSeconds(seconds), NOW, List.of(answers)));
+        return player;
     }
 
     @Test
@@ -61,12 +63,12 @@ class ReportDataTest extends AbstractDatabaseTest {
 
     @Test
     void reportData_collectsTextAnswers() {
-        submit(10, new AnswerRowInput("t", null, "hello"));
+        UUID player = submit(10, new AnswerRowInput("t", null, "hello"));
 
         QuestionTally tally = this.backend.reportData("s").tallies().get("t");
 
         assertEquals("hello", tally.texts().getFirst().text());
-        assertEquals("Steve", tally.texts().getFirst().playerName());
+        assertEquals(player, tally.texts().getFirst().player());
         assertEquals(NOW, tally.texts().getFirst().submittedAt());
         assertEquals(1, tally.answeredRespondents());
     }

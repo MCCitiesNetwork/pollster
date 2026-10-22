@@ -8,6 +8,8 @@ import com.minecraftcitiesnetwork.pollster.config.ConfigLoader;
 import com.minecraftcitiesnetwork.pollster.config.DatabaseConfig;
 import com.minecraftcitiesnetwork.pollster.config.Messages;
 import com.minecraftcitiesnetwork.pollster.config.Settings;
+import com.minecraftcitiesnetwork.pollster.names.PlayerNames;
+import com.minecraftcitiesnetwork.pollster.names.ServerPlayerNames;
 import com.minecraftcitiesnetwork.pollster.rewards.RewardRunner;
 import com.minecraftcitiesnetwork.pollster.store.LoadReport;
 import com.minecraftcitiesnetwork.pollster.store.SurveyStore;
@@ -99,7 +101,9 @@ public final class Pollster extends JavaPlugin {
         LoadReport report = this.store.loadAll();
         getLogger().info("Loaded " + report.loaded() + " surveys");
 
-        this.service = new DefaultSurveyService(this.store, backend, this.executorState, getLogger());
+        // A player-directory plugin may later supply its own PlayerNames in place of this one.
+        PlayerNames names = new ServerPlayerNames(getServer(), this.executorState.network());
+        this.service = new DefaultSurveyService(this.store, backend, names, this.executorState, getLogger());
         // Blocking variant: the main thread cannot wait on a future that needs the main thread.
         this.service.refreshLocksBlocking();
         this.rewards = new RewardRunner(getServer(), getLogger());

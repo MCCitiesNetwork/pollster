@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -388,7 +387,7 @@ class PlayerScreensTest {
         SurveyDefinition s = this.t.add(survey("sub-one", SurveyStatus.OPEN,
                 List.of(new Reward.MessageReward("hi")), single("a", 2, true)));
         PlayerSession session = answered(s, false);
-        when(this.t.service.submit(any(), eq(this.t.playerId), eq("Alex")))
+        when(this.t.service.submit(any(), eq(this.t.playerId)))
                 .thenReturn(CompletableFuture.completedFuture(new SubmitResult.Saved(7)));
         var ctx = this.t.context();
         button(ReviewScreen.create(this.t.ui, session), "Submit").onClick().accept(ctx);
@@ -405,13 +404,13 @@ class PlayerScreensTest {
         SurveyDefinition s = open("dbl-one", single("a", 2, true));
         PlayerSession session = answered(s, false);
         CompletableFuture<SubmitResult> pending = new CompletableFuture<>();
-        when(this.t.service.submit(any(), any(), anyString())).thenReturn(pending);
+        when(this.t.service.submit(any(), any())).thenReturn(pending);
         var ctx = this.t.context();
         var submit = button(ReviewScreen.create(this.t.ui, session), "Submit");
         submit.onClick().accept(ctx);
         submit.onClick().accept(ctx);
         pending.complete(new SubmitResult.Saved(1));
-        verify(this.t.service, times(1)).submit(any(), any(), anyString());
+        verify(this.t.service, times(1)).submit(any(), any());
         verify(this.t.rewards, times(1)).run(any(), any());
     }
 
@@ -419,7 +418,7 @@ class PlayerScreensTest {
     void submit_alreadyResponded_showsMessageNoRewards() {
         SurveyDefinition s = open("dup-one", single("a", 2, true));
         PlayerSession session = answered(s, false);
-        when(this.t.service.submit(any(), any(), anyString()))
+        when(this.t.service.submit(any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(new SubmitResult.AlreadyResponded()));
         var ctx = this.t.context();
         button(ReviewScreen.create(this.t.ui, session), "Submit").onClick().accept(ctx);
@@ -431,7 +430,7 @@ class PlayerScreensTest {
     void submit_failure_allowsRetry() {
         SurveyDefinition s = open("fail-one", single("a", 2, true));
         PlayerSession session = answered(s, false);
-        when(this.t.service.submit(any(), any(), anyString()))
+        when(this.t.service.submit(any(), any()))
                 .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("db down")));
         var ctx = this.t.context();
         button(ReviewScreen.create(this.t.ui, session), "Submit").onClick().accept(ctx);
@@ -444,7 +443,7 @@ class PlayerScreensTest {
     void submit_contentChanged_showsNoLongerAvailable() {
         SurveyDefinition s = open("chg-one", single("a", 2, true));
         PlayerSession session = answered(s, false);
-        when(this.t.service.submit(any(), any(), anyString()))
+        when(this.t.service.submit(any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(new SubmitResult.ContentChanged()));
         var ctx = this.t.context();
         button(ReviewScreen.create(this.t.ui, session), "Submit").onClick().accept(ctx);
@@ -508,7 +507,7 @@ class PlayerScreensTest {
         var ctx = this.t.context();
         button(review, "Submit").onClick().accept(ctx);
         assertTrue(body(ctx.last()).contains("no longer available"));
-        verify(this.t.service, never()).submit(any(), any(), anyString());
+        verify(this.t.service, never()).submit(any(), any());
     }
 
     @Test
@@ -518,7 +517,7 @@ class PlayerScreensTest {
         PlayerSession session = answered(s, true);
         var ctx = this.t.context();
         button(ReviewScreen.create(this.t.ui, session), "Submit").onClick().accept(ctx);
-        verify(this.t.service, never()).submit(any(), any(), anyString());
+        verify(this.t.service, never()).submit(any(), any());
         verify(this.t.rewards, never()).run(any(), any());
         assertTrue(body(ctx.last()).contains("This was a preview"));
         assertTrue(plain(ctx.last().title()).contains("PREVIEW"));
@@ -531,7 +530,7 @@ class PlayerScreensTest {
         this.t.cancelEvents = true;
         var ctx = this.t.context();
         button(ReviewScreen.create(this.t.ui, session), "Submit").onClick().accept(ctx);
-        verify(this.t.service, never()).submit(any(), any(), anyString());
+        verify(this.t.service, never()).submit(any(), any());
         verify(this.t.rewards, never()).run(any(), any());
         assertFalse(session.submitting().get());
     }
@@ -544,7 +543,7 @@ class PlayerScreensTest {
         button(ReviewScreen.create(this.t.ui, session), "Cancel").onClick().accept(ctx);
         assertTrue(ctx.closed);
         assertTrue(this.t.sessions.get(this.t.playerId).isEmpty());
-        verify(this.t.service, never()).submit(any(), any(), anyString());
+        verify(this.t.service, never()).submit(any(), any());
     }
 
     // --- configurable words ------------------------------------------------------------------

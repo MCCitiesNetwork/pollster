@@ -106,7 +106,7 @@ public final class ReviewScreen {
                 return;
             }
             ctx.open(Screens.loading(PlayerScreens.title(ui, survey, false)));
-            ui.service().submit(session.flow(), player.getUniqueId(), player.getName())
+            ui.service().submit(session.flow(), player.getUniqueId())
                     .whenComplete((result, failure) -> finish(ui, session, ctx, result, failure));
         });
     }

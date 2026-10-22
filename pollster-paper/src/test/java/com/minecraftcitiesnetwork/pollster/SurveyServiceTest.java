@@ -20,18 +20,28 @@ import com.minecraftcitiesnetwork.pollster.api.model.Question;
 import com.minecraftcitiesnetwork.pollster.api.model.QuestionType;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
+import com.minecraftcitiesnetwork.pollster.api.report.QuestionTally;
+import com.minecraftcitiesnetwork.pollster.api.report.ReportData;
+import com.minecraftcitiesnetwork.pollster.api.report.SurveyReport;
+import com.minecraftcitiesnetwork.pollster.api.report.TextAnswer;
 import com.minecraftcitiesnetwork.pollster.api.result.OpenResult;
 import com.minecraftcitiesnetwork.pollster.api.result.SubmitResult;
 import com.minecraftcitiesnetwork.pollster.backend.PollsterBackend;
 import com.minecraftcitiesnetwork.pollster.backend.ResponseSubmission;
 import com.minecraftcitiesnetwork.pollster.backend.SurveyStateRecord;
+import com.minecraftcitiesnetwork.pollster.names.PlayerNames;
 import com.minecraftcitiesnetwork.pollster.store.SurveyStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -73,7 +83,28 @@ class SurveyServiceTest {
     @TempDir
     Path dir;
 
+    /** Answers from a fixed map, or fails every lookup; records each request. */
+    private static final class FakePlayerNames implements PlayerNames {
+        final Map<UUID, String> known = new HashMap<>();
+        final List<Collection<UUID>> requests = new ArrayList<>();
+        boolean failing;
+
+        @Override
+        public CompletableFuture<Map<UUID, Optional<String>>> namesOf(Collection<UUID> ids) {
+            this.requests.add(List.copyOf(ids));
+            if (this.failing) {
+                return CompletableFuture.failedFuture(new IllegalStateException("lookup down"));
+            }
+            Map<UUID, Optional<String>> result = new HashMap<>();
+            for (UUID id : ids) {
+                result.put(id, Optional.ofNullable(this.known.get(id)));
+            }
+            return CompletableFuture.completedFuture(result);
+        }
+    }
+
     private final PollsterBackend backend = mock(PollsterBackend.class);
+    private final FakePlayerNames names = new FakePlayerNames();
     private SurveyStore store;
     private DefaultSurveyService service;
 
@@ -82,7 +113,7 @@ class SurveyServiceTest {
         Logger log = Logger.getAnonymousLogger();
         this.store = new SurveyStore(this.dir, log);
         ExecutorService direct = new DirectExecutorService();
-        this.service = new DefaultSurveyService(this.store, this.backend,
+        this.service = new DefaultSurveyService(this.store, this.backend, this.names,
                 new ExecutorState(Runnable::run, direct, direct), log);
     }
 
@@ -126,7 +157,7 @@ class SurveyServiceTest {
                 new SurveyStateRecord("poll-one", "stale-hash", Instant.now(), null)));
         this.service.refreshLocks().join();
         SurveyFlow flow = new SurveyFlow(survey, node -> false, Instant.now());
-        SubmitResult result = this.service.submit(flow, UUID.randomUUID(), "Steve").join();
+        SubmitResult result = this.service.submit(flow, UUID.randomUUID()).join();
         assertInstanceOf(SubmitResult.ContentChanged.class, result);
         verify(this.backend, never()).submit(any());
     }
@@ -140,7 +171,7 @@ class SurveyServiceTest {
         this.service.refreshLocks().join();
         SurveyFlow flow = new SurveyFlow(survey, node -> false, Instant.now());
         UUID player = UUID.randomUUID();
-        SubmitResult result = this.service.submit(flow, player, "Steve").join();
+        SubmitResult result = this.service.submit(flow, player).join();
         assertEquals(new SubmitResult.Saved(7), result);
         ArgumentCaptor<ResponseSubmission> captor = ArgumentCaptor.forClass(ResponseSubmission.class);
         verify(this.backend).submit(captor.capture());
@@ -169,7 +200,7 @@ class SurveyServiceTest {
         SurveyStore mockStore = mock(SurveyStore.class);
         when(mockStore.get("poll-bad")).thenReturn(Optional.of(invalid));
         ExecutorService direct = new DirectExecutorService();
-        DefaultSurveyService strict = new DefaultSurveyService(mockStore, this.backend,
+        DefaultSurveyService strict = new DefaultSurveyService(mockStore, this.backend, this.names,
                 new ExecutorState(Runnable::run, direct, direct), Logger.getAnonymousLogger());
         CompletionException ex = assertThrows(CompletionException.class, () -> strict.open("poll-bad").join());
         assertInstanceOf(IllegalStateException.class, ex.getCause());
@@ -295,7 +326,7 @@ class SurveyServiceTest {
     @Test
     void close_writesCurrentDefinitionNotSnapshot() throws Exception {
         QueuedExecutorService queued = new QueuedExecutorService();
-        DefaultSurveyService deferred = new DefaultSurveyService(this.store, this.backend,
+        DefaultSurveyService deferred = new DefaultSurveyService(this.store, this.backend, this.names,
                 new ExecutorState(Runnable::run, queued, queued), Logger.getAnonymousLogger());
         SurveyDefinition open = saved("poll-one", SurveyStatus.OPEN);
         var closing = deferred.close("poll-one");
@@ -370,6 +401,105 @@ class SurveyServiceTest {
         assertFalse(this.service.report("poll-one").join().survey().anonymous());
     }
 
+    // ---- names in reports ------------------------------------------------------------------
+
+    private static final UUID ALEX = UUID.fromString("0f8fad5b-d9cb-469f-a165-70867728950e");
+    private static final UUID UNKNOWN = UUID.fromString("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+
+    private static SurveyDefinition textSurvey(String id, boolean anonymous) {
+        return new SurveyDefinition(id, "Name", "Desc", SurveyStatus.OPEN, anonymous, false, false, List.of(),
+                List.of(new Question("why", QuestionType.TEXT, "Why", List.of(), true, 0, 0, null)));
+    }
+
+    /** Saves an opened text survey whose lock is OK, with one answer each from ALEX and UNKNOWN. */
+    private void openedTextSurvey(boolean anonymous) throws Exception {
+        SurveyDefinition survey = textSurvey("poll-one", anonymous);
+        this.store.save(survey);
+        openedAs(survey, ContentHash.of(survey));
+        List<TextAnswer> texts = List.of(new TextAnswer("trains", ALEX, Instant.EPOCH),
+                new TextAnswer("parks", UNKNOWN, Instant.EPOCH));
+        when(this.backend.reportData("poll-one")).thenReturn(new ReportData(2, java.util.OptionalDouble.empty(),
+                Map.of("why", new QuestionTally(2, 0, Map.of(), Map.of(), texts))));
+        this.service.refreshLocks().join();
+        this.names.known.put(ALEX, "Alex");
+    }
+
+    @Test
+    void report_resolvesNamesForNamedSurvey() throws Exception {
+        openedTextSurvey(false);
+
+        SurveyReport report = this.service.report("poll-one").join();
+
+        assertEquals("Alex", report.playerNames().get(ALEX));
+        assertEquals(1, this.names.requests.size());
+        assertEquals(java.util.Set.of(ALEX, UNKNOWN), java.util.Set.copyOf(this.names.requests.getFirst()));
+    }
+
+    @Test
+    void report_unknownPlayerShowsShortUuid() throws Exception {
+        openedTextSurvey(false);
+
+        SurveyReport report = this.service.report("poll-one").join();
+
+        assertEquals("7c9e6679…", report.playerNames().get(UNKNOWN));
+    }
+
+    @Test
+    void report_anonymousSurveyNeverLooksUpNames() throws Exception {
+        openedTextSurvey(true);
+
+        SurveyReport report = this.service.report("poll-one").join();
+
+        assertTrue(report.playerNames().isEmpty());
+        assertTrue(this.names.requests.isEmpty());
+    }
+
+    @Test
+    void report_forcedAnonymousNeverLooksUpNames() throws Exception {
+        // Opened anonymous, then hand-edited to anonymous: false; the lock rule hides names.
+        SurveyDefinition named = textSurvey("poll-one", false);
+        this.store.save(named);
+        openedAs(named, ContentHash.of(textSurvey("poll-one", true)));
+        when(this.backend.reportData("poll-one")).thenReturn(new ReportData(1, java.util.OptionalDouble.empty(),
+                Map.of("why", new QuestionTally(1, 0, Map.of(), Map.of(),
+                        List.of(new TextAnswer("trains", ALEX, Instant.EPOCH))))));
+        this.service.refreshLocks().join();
+
+        SurveyReport report = this.service.report("poll-one").join();
+
+        assertTrue(report.survey().anonymous());
+        assertTrue(report.playerNames().isEmpty());
+        assertTrue(this.names.requests.isEmpty());
+    }
+
+    @Test
+    void report_nameLookupFailureStillYieldsShortForms() throws Exception {
+        openedTextSurvey(false);
+        this.names.failing = true;
+
+        SurveyReport report = this.service.report("poll-one").join();
+
+        assertEquals("0f8fad5b…", report.playerNames().get(ALEX));
+        assertEquals("7c9e6679…", report.playerNames().get(UNKNOWN));
+    }
+
+    @Test
+    void report_completesOnMainThreadAfterNameLookup() throws Exception {
+        ExecutorService main = namedMainThread();
+        QueuedExecutorService database = new QueuedExecutorService();
+        try {
+            DefaultSurveyService threaded = new DefaultSurveyService(this.store, this.backend, this.names,
+                    new ExecutorState(main, database, database), Logger.getAnonymousLogger());
+            openedTextSurvey(false);
+            threaded.refreshLocksBlocking();
+            var reporting = threaded.report("poll-one");
+            assertEquals(MAIN, callbackThread(reporting, database));
+            assertEquals("Alex", reporting.join().playerNames().get(ALEX));
+        } finally {
+            main.shutdownNow();
+        }
+    }
+
     // ---- visibleTo ---------------------------------------------------------------------------
 
     private void openedAs(SurveyDefinition survey, String hash) {
@@ -423,7 +553,7 @@ class SurveyServiceTest {
         ExecutorService main = namedMainThread();
         QueuedExecutorService database = new QueuedExecutorService();
         try {
-            DefaultSurveyService threaded = new DefaultSurveyService(this.store, this.backend,
+            DefaultSurveyService threaded = new DefaultSurveyService(this.store, this.backend, this.names,
                     new ExecutorState(main, database, database),
                     Logger.getAnonymousLogger());
             SurveyDefinition closed = saved("poll-one", SurveyStatus.CLOSED);
@@ -441,7 +571,7 @@ class SurveyServiceTest {
         ExecutorService main = namedMainThread();
         QueuedExecutorService database = new QueuedExecutorService();
         try {
-            DefaultSurveyService threaded = new DefaultSurveyService(this.store, this.backend,
+            DefaultSurveyService threaded = new DefaultSurveyService(this.store, this.backend, this.names,
                     new ExecutorState(main, database, database),
                     Logger.getAnonymousLogger());
             saved("poll-one", SurveyStatus.OPEN);

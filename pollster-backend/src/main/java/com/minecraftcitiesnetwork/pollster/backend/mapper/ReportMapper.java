@@ -46,7 +46,7 @@ public interface ReportMapper {
 
     @Select("""
             SELECT a.question_key AS questionKey, a.text_value AS textValue,
-                   r.player_name AS playerName, r.submitted_at AS submittedAt
+                   r.player_uuid AS player, r.submitted_at AS submittedAt
             FROM pollster_answers a JOIN pollster_responses r ON r.id = a.response_id
             WHERE r.survey_id = #{surveyId} AND a.text_value IS NOT NULL
             ORDER BY r.submitted_at, a.id""")

@@ -20,10 +20,12 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.Random;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -41,9 +43,19 @@ class SnapshotBuilderTest {
     private static List<TextAnswer> answers(int count) {
         List<TextAnswer> list = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            list.add(new TextAnswer("answer " + i, "Player" + i, NOW));
+            list.add(new TextAnswer("answer " + i, new UUID(0, i), NOW));
         }
         return list;
+    }
+
+    /** What the service resolves for {@link #answers}: every author but the last has a cached name. */
+    private static Map<UUID, String> names(int count) {
+        Map<UUID, String> names = new HashMap<>();
+        for (int i = 0; i < count - 1; i++) {
+            names.put(new UUID(0, i), "Player" + i);
+        }
+        names.put(new UUID(0, count - 1), "00000000\u2026");
+        return names;
     }
 
     static SurveyReport report(boolean anonymous) {
@@ -67,7 +79,8 @@ class SnapshotBuilderTest {
                         List.of(new OptionResult("a", "A", 3, 100.0), new OptionResult("b", "B", 1, 33.3)),
                         Map.of(1, 2, 2, 1), List.of()),
                 new QuestionReport(text, 10, 0, List.of(), Map.of(), answers(12)));
-        return new SurveyReport(survey, 10, OptionalDouble.of(183.6), questions);
+        return new SurveyReport(survey, 10, OptionalDouble.of(183.6), questions,
+                anonymous ? Map.of() : names(12));
     }
 
     private static JsonNode textAnswers(ObjectNode snapshot) {
@@ -90,13 +103,14 @@ class SnapshotBuilderTest {
     }
 
     @Test
-    void snapshot_namedKeepsNames() {
+    void snapshot_namedUsesResolvedNames() {
         ObjectNode snapshot = builder(42).build(report(false), OPENED, null);
         JsonNode answers = textAnswers(snapshot);
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 11; i++) {
             assertEquals("answer " + i, answers.get(i).get("text").asText());
             assertEquals("Player" + i, answers.get(i).get("player").asText());
         }
+        assertEquals("00000000\u2026", answers.get(11).get("player").asText());
     }
 
     @Test
@@ -220,8 +234,11 @@ class SnapshotBuilderTest {
             issueResults.add(new OptionResult(option.key(), option.label(), issueVotes[i], 100.0 * issueVotes[i] / 52));
         }
         List<TextAnswer> answers = new ArrayList<>();
-        for (String[] reasonAnswer : REASONS) {
-            answers.add(new TextAnswer(reasonAnswer[0], reasonAnswer[1], NOW));
+        Map<UUID, String> names = new HashMap<>();
+        for (int i = 0; i < REASONS.length; i++) {
+            UUID player = new UUID(0, i);
+            answers.add(new TextAnswer(REASONS[i][0], player, NOW));
+            names.put(player, REASONS[i][1]);
         }
         List<QuestionReport> reports = List.of(
                 choice(tree, 52, 0, 1, 9, 8, 11, 5, 4, 3, 2, 1, 1, 7, 0),
@@ -234,6 +251,6 @@ class SnapshotBuilderTest {
                 "Help shape what the city builds next. Thanks for taking part!",
                 anonymous ? SurveyStatus.CLOSED : SurveyStatus.OPEN, anonymous, false, false, List.of(),
                 List.of(tree, issues, reason, again, rating));
-        return new SurveyReport(survey, 52, OptionalDouble.of(184), reports);
+        return new SurveyReport(survey, 52, OptionalDouble.of(184), reports, anonymous ? Map.of() : names);
     }
 }

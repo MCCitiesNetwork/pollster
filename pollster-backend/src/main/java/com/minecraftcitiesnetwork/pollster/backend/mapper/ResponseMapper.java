@@ -13,9 +13,9 @@ import java.util.UUID;
 public interface ResponseMapper {
 
     @Insert("""
-            INSERT INTO pollster_responses (survey_id, player_uuid, player_name, started_at, submitted_at)
-            VALUES (#{surveyId}, #{player}, #{name}, #{startedAt}, #{submittedAt})""")
-    int insert(@Param("surveyId") String surveyId, @Param("player") UUID player, @Param("name") String name,
+            INSERT INTO pollster_responses (survey_id, player_uuid, started_at, submitted_at)
+            VALUES (#{surveyId}, #{player}, #{startedAt}, #{submittedAt})""")
+    int insert(@Param("surveyId") String surveyId, @Param("player") UUID player,
                @Param("startedAt") Instant startedAt, @Param("submittedAt") Instant submittedAt);
 
     /** Valid on the same connection straight after {@link #insert}. */

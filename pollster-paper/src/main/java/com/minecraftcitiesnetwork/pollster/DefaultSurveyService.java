@@ -7,6 +7,7 @@ import com.minecraftcitiesnetwork.pollster.api.model.SurveyIds;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
 import com.minecraftcitiesnetwork.pollster.api.report.ReportBuilder;
 import com.minecraftcitiesnetwork.pollster.api.report.SurveyReport;
+import com.minecraftcitiesnetwork.pollster.api.report.TextAnswer;
 import com.minecraftcitiesnetwork.pollster.api.result.OpenResult;
 import com.minecraftcitiesnetwork.pollster.api.result.SubmitResult;
 import com.minecraftcitiesnetwork.pollster.api.validation.SurveyValidator;
@@ -16,6 +17,7 @@ import com.minecraftcitiesnetwork.pollster.backend.AnswerRowInput;
 import com.minecraftcitiesnetwork.pollster.backend.PollsterBackend;
 import com.minecraftcitiesnetwork.pollster.backend.ResponseSubmission;
 import com.minecraftcitiesnetwork.pollster.backend.SurveyStateRecord;
+import com.minecraftcitiesnetwork.pollster.names.PlayerNames;
 import com.minecraftcitiesnetwork.pollster.store.SurveyStore;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,6 +33,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.bukkit.entity.Player;
@@ -44,6 +47,7 @@ public final class DefaultSurveyService implements SurveyService {
 
     private final SurveyStore store;
     private final PollsterBackend backend;
+    private final PlayerNames names;
     private final ExecutorState exec;
     private final Logger log;
     // Replaced wholesale, so a reader never sees a half-updated map.
@@ -56,9 +60,10 @@ public final class DefaultSurveyService implements SurveyService {
     private final ConcurrentHashMap<String, Object> writeLocks = new ConcurrentHashMap<>();
 
     public DefaultSurveyService(@NotNull SurveyStore store, @NotNull PollsterBackend backend,
-                                @NotNull ExecutorState exec, @NotNull Logger log) {
+                                @NotNull PlayerNames names, @NotNull ExecutorState exec, @NotNull Logger log) {
         this.store = store;
         this.backend = backend;
+        this.names = names;
         this.exec = exec;
         this.log = log;
     }
@@ -375,14 +380,13 @@ public final class DefaultSurveyService implements SurveyService {
     // ---- responses -----------------------------------------------------------------------
 
     @Override
-    public @NotNull CompletableFuture<SubmitResult> submit(@NotNull SurveyFlow flow, @NotNull UUID player,
-                                                           @NotNull String playerName) {
+    public @NotNull CompletableFuture<SubmitResult> submit(@NotNull SurveyFlow flow, @NotNull UUID player) {
         SurveyDefinition survey = flow.survey();
         if (lock(survey.id()) != SurveyLock.OK) {
             return CompletableFuture.completedFuture(new SubmitResult.ContentChanged());
         }
         ResponseSubmission submission = new ResponseSubmission(survey.id(), ContentHash.of(survey), player,
-                playerName, flow.startedAt(), Instant.now(), AnswerRowInput.fromAnswers(flow.answers()));
+                flow.startedAt(), Instant.now(), AnswerRowInput.fromAnswers(flow.answers()));
         return onDatabase(() -> this.backend.submit(submission));
     }
 
@@ -410,7 +414,45 @@ public final class DefaultSurveyService implements SurveyService {
                     true, survey.featured(), survey.requiresPermission(), survey.rewards(), survey.questions());
         }
         SurveyDefinition reported = survey;
-        return onDatabase(() -> ReportBuilder.build(reported, this.backend.reportData(surveyId)));
+        CompletableFuture<SurveyReport> built = CompletableFuture.supplyAsync(
+                () -> ReportBuilder.build(reported, this.backend.reportData(surveyId)), this.exec.database());
+        // Names are looked up only for a survey that shows them, so an anonymous survey never
+        // links an answer to a player, not even in memory.
+        return this.exec.onMainThread(reported.anonymous() ? built : built.thenCompose(this::withNames));
+    }
+
+    private CompletableFuture<SurveyReport> withNames(SurveyReport report) {
+        Set<UUID> authors = report.questions().stream()
+                .flatMap(question -> question.texts().stream())
+                .map(TextAnswer::player)
+                .collect(Collectors.toSet());
+        if (authors.isEmpty()) {
+            return CompletableFuture.completedFuture(report);
+        }
+        CompletableFuture<Map<UUID, Optional<String>>> lookup;
+        try {
+            lookup = this.names.namesOf(authors);
+        } catch (RuntimeException e) {
+            lookup = CompletableFuture.failedFuture(e);
+        }
+        return lookup.handle((found, error) -> {
+            if (error != null) {
+                // A report is still useful without names, so short UUIDs stand in for all of them.
+                this.log.log(Level.WARNING, "Could not look up player names for survey '"
+                        + report.survey().id() + "'", error);
+            }
+            Map<UUID, String> display = new HashMap<>();
+            for (UUID author : authors) {
+                Optional<String> name = found == null ? null : found.get(author);
+                display.put(author, name != null && name.isPresent() ? name.get() : shortForm(author));
+            }
+            return report.withPlayerNames(display);
+        });
+    }
+
+    /** Stands in for a player the server has never cached: enough to tell answers apart. */
+    private static String shortForm(UUID player) {
+        return player.toString().substring(0, 8) + "\u2026";
     }
 
     @Override

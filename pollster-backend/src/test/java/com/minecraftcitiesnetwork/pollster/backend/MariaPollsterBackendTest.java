@@ -40,7 +40,7 @@ class MariaPollsterBackendTest extends AbstractDatabaseTest {
     }
 
     private ResponseSubmission submission(String surveyId, UUID player, List<AnswerRowInput> answers) {
-        return new ResponseSubmission(surveyId, HASH, player, "Steve", NOW.minusSeconds(30), NOW, answers);
+        return new ResponseSubmission(surveyId, HASH, player, NOW.minusSeconds(30), NOW, answers);
     }
 
     private int count(String sql) throws SQLException {

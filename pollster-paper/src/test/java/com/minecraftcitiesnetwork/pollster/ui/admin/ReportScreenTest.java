@@ -18,9 +18,11 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -46,14 +48,19 @@ class ReportScreenTest {
         SurveyDefinition survey = new SurveyDefinition("poll", "Poll", "d", SurveyStatus.OPEN, anonymous, false,
                 false, List.of(), List.of(single, why));
         List<TextAnswer> texts = new ArrayList<>();
+        Map<UUID, String> names = new HashMap<>();
         for (int i = 0; i < answers; i++) {
-            texts.add(new TextAnswer(text + i, "Steve" + i, Instant.EPOCH));
+            UUID player = new UUID(0, i);
+            texts.add(new TextAnswer(text + i, player, Instant.EPOCH));
+            names.put(player, "Steve" + i);
         }
         return new SurveyReport(survey, 10, OptionalDouble.of(90),
                 List.of(new QuestionReport(single, 10, 0,
                                 List.of(new OptionResult("a", "Alder", 5, 50.0), new OptionResult("b", "Birch", 5, 50.0)),
                                 Map.of(), List.of()),
-                        new QuestionReport(why, 4, 0, List.of(), Map.of(), texts)));
+                        new QuestionReport(why, 4, 0, List.of(), Map.of(), texts)),
+                // The service resolves names only for a survey that shows them.
+                anonymous ? Map.of() : names);
     }
 
     @Test

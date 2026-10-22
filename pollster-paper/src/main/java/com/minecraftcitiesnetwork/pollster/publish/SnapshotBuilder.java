@@ -61,7 +61,7 @@ public final class SnapshotBuilder {
 
         ArrayNode questions = root.putArray("questions");
         for (QuestionReport questionReport : report.questions()) {
-            questions.add(question(questionReport, report.survey().anonymous()));
+            questions.add(question(questionReport, report));
         }
         return root;
     }
@@ -76,7 +76,7 @@ public final class SnapshotBuilder {
         }
     }
 
-    private ObjectNode question(QuestionReport report, boolean anonymous) {
+    private ObjectNode question(QuestionReport report, SurveyReport surveyReport) {
         Question question = report.question();
         ObjectNode node = NODES.objectNode();
         node.put("key", question.key());
@@ -85,7 +85,7 @@ public final class SnapshotBuilder {
         node.put("shownTo", report.shownTo());
         node.put("skipped", report.skipped());
         if (question.type() == QuestionType.TEXT) {
-            node.set("answers", answers(report.texts(), anonymous));
+            node.set("answers", answers(report.texts(), surveyReport));
             return node;
         }
         // YES_NO serialises like SINGLE: the viewer reads the yes and no options as ordinary options.
@@ -105,7 +105,8 @@ public final class SnapshotBuilder {
         return node;
     }
 
-    private ArrayNode answers(List<TextAnswer> texts, boolean anonymous) {
+    private ArrayNode answers(List<TextAnswer> texts, SurveyReport report) {
+        boolean anonymous = report.survey().anonymous();
         List<TextAnswer> ordered = new ArrayList<>(texts);
         if (anonymous) {
             // Submission order would let a reader match answers to the order players were seen online.
@@ -115,10 +116,11 @@ public final class SnapshotBuilder {
         for (TextAnswer answer : ordered) {
             ObjectNode node = answers.addObject();
             node.put("text", answer.text());
-            if (anonymous || answer.playerName() == null) {
+            String name = anonymous ? null : report.playerNames().get(answer.player());
+            if (name == null) {
                 node.putNull("player");
             } else {
-                node.put("player", answer.playerName());
+                node.put("player", name);
             }
         }
         return answers;

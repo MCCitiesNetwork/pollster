@@ -1,6 +1,8 @@
 package com.minecraftcitiesnetwork.pollster.api.report;
 
 import java.time.Instant;
+import java.util.UUID;
 
-public record TextAnswer(String text, String playerName, Instant submittedAt) {
+/** @param player who answered; a report resolves the name only when the survey is not anonymous */
+public record TextAnswer(String text, UUID player, Instant submittedAt) {
 }

@@ -55,9 +55,10 @@ public final class TextAnswersScreen {
             // Component.text keeps player input literal, so tags typed by players never render.
             Component line = Component.text("• ", NamedTextColor.GRAY)
                     .append(Component.text(answer.text(), NamedTextColor.WHITE));
-            if (showNames && answer.playerName() != null) {
+            String name = showNames ? report.playerNames().get(answer.player()) : null;
+            if (name != null) {
                 line = line.append(Component.text(style.text(REPORT_ANSWERS_BY,
-                        MessageContainer.value("name", answer.playerName())), NamedTextColor.GRAY));
+                        MessageContainer.value("name", name)), NamedTextColor.GRAY));
             }
             screen.body(line);
         }

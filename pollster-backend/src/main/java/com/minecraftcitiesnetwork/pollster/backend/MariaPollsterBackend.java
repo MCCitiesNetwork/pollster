@@ -83,8 +83,8 @@ public final class MariaPollsterBackend implements PollsterBackend {
             }
             ResponseMapper responses = session.getMapper(ResponseMapper.class);
             try {
-                responses.insert(submission.surveyId(), submission.player(), submission.playerName(),
-                        submission.startedAt(), submission.submittedAt());
+                responses.insert(submission.surveyId(), submission.player(), submission.startedAt(),
+                        submission.submittedAt());
             } catch (RuntimeException ex) {
                 if (isDuplicateKey(ex)) {
                     session.rollback();
@@ -182,7 +182,7 @@ public final class MariaPollsterBackend implements PollsterBackend {
             Map<String, List<TextAnswer>> texts = new HashMap<>();
             for (Map<String, Object> row : mapper.texts(surveyId)) {
                 texts.computeIfAbsent((String) row.get("questionKey"), k -> new ArrayList<>())
-                        .add(new TextAnswer((String) row.get("textValue"), (String) row.get("playerName"),
+                        .add(new TextAnswer((String) row.get("textValue"), UuidBinaryTypeHandler.fromBytes((byte[]) row.get("player")),
                                 ((Timestamp) row.get("submittedAt")).toInstant()));
             }
 

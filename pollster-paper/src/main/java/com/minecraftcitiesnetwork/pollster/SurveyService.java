@@ -81,13 +81,17 @@ public interface SurveyService {
     @NotNull CompletableFuture<Void> delete(@NotNull String surveyId);
 
     /** Saves a finished flow. Returns ContentChanged without touching the database when the lock is not OK. */
-    @NotNull CompletableFuture<SubmitResult> submit(@NotNull SurveyFlow flow, @NotNull UUID player, @NotNull String playerName);
+    @NotNull CompletableFuture<SubmitResult> submit(@NotNull SurveyFlow flow, @NotNull UUID player);
 
     @NotNull CompletableFuture<Set<String>> completed(@NotNull UUID player);
 
     @NotNull CompletableFuture<Map<String, Integer>> responseCounts();
 
-    /** The report. When the lock is not OK, the report's survey is anonymous whatever the file says. */
+    /**
+     * The report. When the lock is not OK, the report's survey is anonymous whatever the file says.
+     * For a survey that is not anonymous, text-answer authors' names are resolved; a failed lookup
+     * shows short UUIDs instead of failing the report.
+     */
     @NotNull CompletableFuture<SurveyReport> report(@NotNull String surveyId);
 
     @NotNull CompletableFuture<Optional<java.time.Instant>> lastFeatured(@NotNull UUID player);

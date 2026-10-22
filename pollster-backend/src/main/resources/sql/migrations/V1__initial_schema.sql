@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS pollster_responses (
   id            BIGINT AUTO_INCREMENT PRIMARY KEY,
   survey_id     VARCHAR(48) NOT NULL,
   player_uuid   BINARY(16)  NOT NULL,
-  player_name   VARCHAR(16) NOT NULL,
   started_at    DATETIME   NOT NULL,
   submitted_at  DATETIME   NOT NULL,
   UNIQUE KEY uq_response (survey_id, player_uuid),
