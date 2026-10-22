@@ -139,6 +139,29 @@ class PlayerScreensTest {
         assertEquals("second-one", this.t.sessions.get(this.t.playerId).orElseThrow().flow().survey().id());
     }
 
+    @Test
+    void intro_permissionConditionsFollowThePlayerAfterRejoin() {
+        com.minecraftcitiesnetwork.pollster.api.model.Question gated =
+                new com.minecraftcitiesnetwork.pollster.api.model.Question("g",
+                        com.minecraftcitiesnetwork.pollster.api.model.QuestionType.TEXT, "Gated", List.of(),
+                        false, 0, 0, "permission(\"vip\")");
+        SurveyDefinition s = open("perm-one", single("a", 2, true), gated);
+        var ctx = this.t.context();
+        button(IntroScreen.create(this.t.ui, s, false), "Start").onClick().accept(ctx);
+        PlayerSession session = this.t.sessions.get(this.t.playerId).orElseThrow();
+        assertEquals(1, session.flow().visibleCount());
+
+        // After a rejoin the server hands out a new Player object, which is the one that counts.
+        org.bukkit.entity.Player rejoined = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        when(rejoined.hasPermission("vip")).thenReturn(true);
+        this.t.online.put(this.t.playerId, rejoined);
+        assertEquals(2, session.flow().visibleCount());
+
+        // Offline: no permissions at all.
+        this.t.online.remove(this.t.playerId);
+        assertEquals(1, session.flow().visibleCount());
+    }
+
     // --- question -----------------------------------------------------------------------
 
     @Test

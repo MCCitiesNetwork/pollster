@@ -55,6 +55,8 @@ final class PlayerTestSupport {
     final Map<String, SurveyDefinition> surveys = new HashMap<>();
     final SessionRegistry sessions = new SessionRegistry(Clock.fixed(START, ZoneOffset.UTC));
     final Messages messages;
+    /** Who is online, by UUID, as the server would answer; the test player starts online. */
+    final Map<UUID, Player> online = new HashMap<>();
     /** Set to cancel every cancellable event the screens fire. */
     boolean cancelEvents;
     final PlayerUi ui;
@@ -69,6 +71,7 @@ final class PlayerTestSupport {
         when(this.player.getUniqueId()).thenReturn(this.playerId);
         when(this.player.getName()).thenReturn("Alex");
         when(this.player.hasPermission(anyString())).thenReturn(false);
+        this.online.put(this.playerId, this.player);
         when(this.service.survey(anyString()))
                 .thenAnswer(call -> Optional.ofNullable(this.surveys.get(call.<String>getArgument(0))));
         when(this.service.lock(anyString())).thenReturn(SurveyService.SurveyLock.OK);
@@ -80,7 +83,7 @@ final class PlayerTestSupport {
         };
         this.ui = new PlayerUi(this.service, this.sessions, this.rewards, this.messages, Style.defaults(),
                 new Settings(null, null, 0, null, null), new SoundPlayer(new Settings.Sounds(null, null, null, null)),
-                events);
+                events, id -> Optional.ofNullable(this.online.get(id)));
     }
 
     SurveyDefinition add(SurveyDefinition survey) {

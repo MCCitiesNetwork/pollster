@@ -16,6 +16,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /** Name, description and what to expect, with Start. */
 public final class IntroScreen {
@@ -93,7 +94,8 @@ public final class IntroScreen {
                 return;
             }
         }
-        SurveyFlow flow = new SurveyFlow(survey, player::hasPermission, ui.sessions().now(),
+        UUID playerId = player.getUniqueId();
+        SurveyFlow flow = new SurveyFlow(survey, node -> ui.hasPermission(playerId, node), ui.sessions().now(),
                 ui.settings().textMaxLength());
         PlayerSession session = ui.sessions().start(player.getUniqueId(), flow, preview);
         ui.sounds().open(player);
