@@ -19,6 +19,21 @@ public final class MessageKeys {
     /** Shown for any stale dialog button: survey closed, reloaded, deleted, or session ended. */
     public static final String SURVEY_UNAVAILABLE = "errors.survey-unavailable";
 
+    // Admin editor (/pollster).
+    public static final String EDITOR_OPEN_WARNING = "editor.open-warning";
+    public static final String EDITOR_LOCKED = "editor.locked";
+    public static final String EDITOR_READ_ONLY = "editor.read-only";
+    public static final String EDITOR_ANONYMOUS_LOCKED = "editor.anonymous-locked";
+    public static final String EDITOR_MOVE_BREAKS_CONDITION = "editor.move-breaks-condition";
+    public static final String EDITOR_KEY_REFERENCED = "editor.key-referenced";
+    public static final String EDITOR_REMOVE_REFERENCED = "editor.remove-referenced";
+    public static final String EDITOR_DUPLICATE_KEY = "editor.duplicate-key";
+    public static final String EDITOR_UNKNOWN_QUESTION = "editor.unknown-question";
+    public static final String EDITOR_SAVE_FAILED = "editor.save-failed";
+    public static final String EDITOR_RELOAD_OK = "editor.reload-ok";
+    public static final String EDITOR_RELOAD_FAILURE = "editor.reload-failure";
+    public static final String EDITOR_RELOAD_ERROR = "editor.reload-error";
+
     private MessageKeys() {
     }
 }
