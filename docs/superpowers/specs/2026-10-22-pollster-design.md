@@ -465,7 +465,6 @@ CREATE TABLE pollster_responses (
   id            BIGINT AUTO_INCREMENT PRIMARY KEY,
   survey_id     VARCHAR(48) NOT NULL,
   player_uuid   BINARY(16)  NOT NULL,
-  player_name   VARCHAR(16) NOT NULL,
   started_at    TIMESTAMP   NOT NULL,
   submitted_at  TIMESTAMP   NOT NULL,
   UNIQUE KEY uq_response (survey_id, player_uuid),
@@ -487,6 +486,11 @@ CREATE TABLE pollster_player_state (
   last_featured_at  TIMESTAMP  NULL
 );
 ```
+
+Pollster stores only the player's UUID, never their name. Names for
+non-anonymous reports are looked up by UUID when the report is built, from
+the server's user cache (or a player-directory plugin when one is installed);
+an unknown player shows as a shortened UUID.
 
 A `MULTIPLE` answer is one row per selected option. A skipped question has
 one row with both `option_key` and `text_value` null. A hidden question has
@@ -611,7 +615,8 @@ Jackson, and uploads it with a `POST` to a bytebin-compatible paste service
 ```
 
 For an anonymous survey `player` is always `null` and text answers are
-shuffled. For other surveys `player` is the name recorded at submission.
+shuffled. For other surveys `player` is the player's current name, looked up
+by UUID when the snapshot is built.
 Question text is converted from MiniMessage to plain text.
 
 Publishing failures (network, non-2xx) are reported in chat with the reason.
