@@ -480,4 +480,19 @@ class SurveyServiceTest {
         assertEquals(SurveyLifecycleException.Reason.STATUS_CHANGED,
                 reasonOf(() -> this.service.open("poll-open").join()));
     }
+
+    @Test
+    void refreshLocks_failureStillChecksReloadedFilesAgainstCachedState() throws Exception {
+        SurveyDefinition open = saved("poll-one", SurveyStatus.OPEN);
+        openedAs(open, ContentHash.of(open));
+        this.service.refreshLocks().join();
+        assertEquals(SurveyLock.OK, this.service.lock("poll-one"));
+
+        // The file is hand-edited, then the reload's database read fails.
+        this.store.save(otherQuestions(open));
+        when(this.backend.state("poll-one")).thenThrow(new IllegalStateException("database down"));
+        assertThrows(CompletionException.class, () -> this.service.refreshLocks().join());
+
+        assertEquals(SurveyLock.CONTENT_CHANGED, this.service.lock("poll-one"));
+    }
 }

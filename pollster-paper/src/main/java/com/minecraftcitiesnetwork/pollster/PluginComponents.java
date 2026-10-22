@@ -2,6 +2,7 @@ package com.minecraftcitiesnetwork.pollster;
 
 import com.minecraftcitiesnetwork.pollster.SurveyService.SurveyLock;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
+import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
 import com.minecraftcitiesnetwork.pollster.command.PollsterCommand;
 import com.minecraftcitiesnetwork.pollster.command.ReportCommands;
 import com.minecraftcitiesnetwork.pollster.command.SurveysCommand;
@@ -118,19 +119,29 @@ public final class PluginComponents {
     }
 
     /** Ids of surveys players can currently take; captured before a reload to compare after it. */
-    public @NotNull Set<String> surveysWithLockOk() {
-        return this.service.surveys().stream().map(SurveyDefinition::id)
+    /** The surveys players can take right now: OPEN, with a content lock that matches the database. */
+    public @NotNull Set<String> takeableSurveys() {
+        return this.service.surveys().stream()
+                .filter(survey -> survey.status() == SurveyStatus.OPEN)
+                .map(SurveyDefinition::id)
                 .filter(id -> this.service.lock(id) == SurveyLock.OK)
                 .collect(Collectors.toUnmodifiableSet());
     }
 
     /**
-     * Ends the sessions of every survey that was takeable before a reload and is not now (its file
-     * changed after opening, or it was removed), so no one submits answers to edited questions.
+     * Ends the sessions of every survey that was takeable before a reload and is not now: its file
+     * changed after opening, its status was edited away from OPEN, or it was removed. So no one
+     * submits answers to edited questions or into a closed survey.
+     *
+     * @param locksVerified false when the lock refresh failed; then no survey can be trusted and
+     *                      every one of them has its sessions ended
      */
-    public void endSessionsLostOnReload(@NotNull Set<String> okBefore) {
-        for (String id : okBefore) {
-            if (this.service.lock(id) != SurveyLock.OK || this.service.survey(id).isEmpty()) {
+    public void endSessionsLostOnReload(@NotNull Set<String> takeableBefore, boolean locksVerified) {
+        for (String id : takeableBefore) {
+            boolean stillTakeable = locksVerified
+                    && this.service.lock(id) == SurveyLock.OK
+                    && this.service.survey(id).map(survey -> survey.status() == SurveyStatus.OPEN).orElse(false);
+            if (!stillTakeable) {
                 this.sessions.endAllFor(id);
             }
         }

@@ -3,6 +3,7 @@ package com.minecraftcitiesnetwork.pollster;
 import com.minecraftcitiesnetwork.pollster.SurveyService.SurveyLock;
 import com.minecraftcitiesnetwork.pollster.api.flow.SurveyFlow;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
+import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
 import com.minecraftcitiesnetwork.pollster.config.Messages;
 import com.minecraftcitiesnetwork.pollster.config.Settings;
 import com.minecraftcitiesnetwork.pollster.rewards.RewardRunner;
@@ -137,10 +138,55 @@ class PluginComponentsTest {
         this.components.sessions().start(a, flow(changed), false);
         this.components.sessions().start(b, flow(kept), false);
 
-        this.components.endSessionsLostOnReload(Set.of("changed", "kept"));
+        this.components.endSessionsLostOnReload(Set.of("changed", "kept"), true);
 
         assertTrue(this.components.sessions().get(a).isEmpty());
         assertTrue(this.components.sessions().get(b).isPresent());
+    }
+
+    @Test
+    void endSessionsLostOnReload_endsSurveysNoLongerOpenOrGone() {
+        SurveyDefinition closed = survey("closed");
+        Mockito.when(closed.status()).thenReturn(SurveyStatus.CLOSED);
+        SurveyDefinition gone = survey("gone");
+        Mockito.when(this.service.survey(anyString())).thenReturn(Optional.empty());
+        Mockito.when(this.service.survey("closed")).thenReturn(Optional.of(closed));
+        Mockito.when(this.service.lock(anyString())).thenReturn(SurveyLock.OK);
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        this.components.sessions().start(a, flow(closed), false);
+        this.components.sessions().start(b, flow(gone), false);
+
+        this.components.endSessionsLostOnReload(Set.of("closed", "gone"), true);
+
+        assertTrue(this.components.sessions().get(a).isEmpty(), "status hand-edited to CLOSED");
+        assertTrue(this.components.sessions().get(b).isEmpty(), "file removed");
+    }
+
+    @Test
+    void endSessionsLostOnReload_endsEverySurveyWhenLocksCouldNotBeVerified() {
+        SurveyDefinition kept = survey("kept");
+        Mockito.when(this.service.survey("kept")).thenReturn(Optional.of(kept));
+        Mockito.when(this.service.lock("kept")).thenReturn(SurveyLock.OK);
+        UUID a = UUID.randomUUID();
+        this.components.sessions().start(a, flow(kept), false);
+
+        this.components.endSessionsLostOnReload(Set.of("kept"), false);
+
+        assertTrue(this.components.sessions().get(a).isEmpty());
+    }
+
+    @Test
+    void takeableSurveys_onlyOpenWithLockOk() {
+        SurveyDefinition open = survey("open");
+        SurveyDefinition closed = survey("closed");
+        Mockito.when(closed.status()).thenReturn(SurveyStatus.CLOSED);
+        SurveyDefinition locked = survey("locked");
+        Mockito.when(this.service.surveys()).thenReturn(List.of(open, closed, locked));
+        Mockito.when(this.service.lock(anyString())).thenReturn(SurveyLock.OK);
+        Mockito.when(this.service.lock("locked")).thenReturn(SurveyLock.CONTENT_CHANGED);
+
+        assertEquals(Set.of("open"), this.components.takeableSurveys());
     }
 
     @Test
@@ -156,6 +202,7 @@ class PluginComponentsTest {
     private static SurveyDefinition survey(String id) {
         SurveyDefinition survey = Mockito.mock(SurveyDefinition.class);
         Mockito.when(survey.id()).thenReturn(id);
+        Mockito.when(survey.status()).thenReturn(SurveyStatus.OPEN);
         return survey;
     }
 

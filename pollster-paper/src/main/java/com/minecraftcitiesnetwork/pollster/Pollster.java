@@ -14,6 +14,7 @@ import com.minecraftcitiesnetwork.pollster.store.SurveyStore;
 import java.time.Clock;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -166,7 +167,7 @@ public final class Pollster extends JavaPlugin {
         record Loaded(Settings settings, Messages messages, LoadReport report) {
         }
         // Captured on the calling (main) thread, before the store or the locks change.
-        Set<String> okBefore = wired.surveysWithLockOk();
+        Set<String> takeableBefore = wired.takeableSurveys();
         return exec.onMainThread(CompletableFuture.supplyAsync(() -> {
                     try {
                         Settings newSettings = loader.load("settings.yml", Settings.class);
@@ -181,9 +182,14 @@ public final class Pollster extends JavaPlugin {
                     this.messages.set(loaded.messages());
                     return loaded.report();
                 })
-                .thenCompose(report -> surveyService.refreshLocks().thenApply(locks -> {
+                .thenCompose(report -> surveyService.refreshLocks().handle((locks, error) -> {
                     // Players mid-survey must not submit answers to questions that changed under them.
-                    wired.endSessionsLostOnReload(okBefore);
+                    // refreshLocks completes on the main thread either way. When it failed, nothing
+                    // could be verified, so every session that might be affected is ended.
+                    wired.endSessionsLostOnReload(takeableBefore, error == null);
+                    if (error != null) {
+                        throw error instanceof CompletionException wrapped ? wrapped : new CompletionException(error);
+                    }
                     return report;
                 }));
     }

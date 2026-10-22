@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -71,7 +72,16 @@ public final class DefaultSurveyService implements SurveyService {
 
     @Override
     public @NotNull CompletableFuture<Map<String, SurveyLock>> refreshLocks() {
-        return this.exec.onMainThread(CompletableFuture.supplyAsync(this::loadStates, this.exec.database())).thenApply(this::applyStates);
+        return this.exec.onMainThread(CompletableFuture.supplyAsync(this::loadStates, this.exec.database()))
+                .handle((loaded, error) -> {
+                    if (error != null) {
+                        // The database could not be read, but the files may have just been reloaded.
+                        // Check them against the cached rows so a hand-edited file is not left marked OK.
+                        applyStates(this.states);
+                        throw error instanceof CompletionException wrapped ? wrapped : new CompletionException(error);
+                    }
+                    return applyStates(loaded);
+                });
     }
 
     /**
