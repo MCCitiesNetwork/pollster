@@ -381,4 +381,58 @@ class SurveyServiceTest {
         assertEquals(List.of("poll-gated", "poll-open"),
                 this.service.visibleTo(with).stream().map(SurveyDefinition::id).toList());
     }
+    // ---- completion thread -------------------------------------------------------------------
+
+    private static final String MAIN = "pollster-test-main";
+
+    /** A real single main thread, so a test can see which thread a callback ran on. */
+    private static ExecutorService namedMainThread() {
+        return java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> new Thread(runnable, MAIN));
+    }
+
+    /** Attaches the callback before the queued database work runs, so it cannot run inline. */
+    private static String callbackThread(java.util.concurrent.CompletableFuture<?> future,
+                                         QueuedExecutorService database) throws Exception {
+        java.util.concurrent.CompletableFuture<String> thread = new java.util.concurrent.CompletableFuture<>();
+        future.whenComplete((value, error) -> thread.complete(Thread.currentThread().getName()));
+        database.runAll();
+        return thread.get(5, TimeUnit.SECONDS);
+    }
+
+    @Test
+    void save_failureCompletesOnMainThread() throws Exception {
+        ExecutorService main = namedMainThread();
+        QueuedExecutorService database = new QueuedExecutorService();
+        try {
+            DefaultSurveyService threaded = new DefaultSurveyService(this.store, this.backend,
+                    new ExecutorState(main, database, database),
+                    Logger.getAnonymousLogger());
+            SurveyDefinition closed = saved("poll-one", SurveyStatus.CLOSED);
+            var saving = threaded.save(with(closed, false, true));
+            assertEquals(MAIN, callbackThread(saving, database));
+            CompletionException ex = assertThrows(CompletionException.class, saving::join);
+            assertInstanceOf(IllegalStateException.class, ex.getCause());
+        } finally {
+            main.shutdownNow();
+        }
+    }
+
+    @Test
+    void refreshLocks_failureCompletesOnMainThread() throws Exception {
+        ExecutorService main = namedMainThread();
+        QueuedExecutorService database = new QueuedExecutorService();
+        try {
+            DefaultSurveyService threaded = new DefaultSurveyService(this.store, this.backend,
+                    new ExecutorState(main, database, database),
+                    Logger.getAnonymousLogger());
+            saved("poll-one", SurveyStatus.OPEN);
+            when(this.backend.state("poll-one")).thenThrow(new IllegalStateException("database down"));
+            var refreshing = threaded.refreshLocks();
+            assertEquals(MAIN, callbackThread(refreshing, database));
+            CompletionException ex = assertThrows(CompletionException.class, refreshing::join);
+            assertInstanceOf(IllegalStateException.class, ex.getCause());
+        } finally {
+            main.shutdownNow();
+        }
+    }
 }

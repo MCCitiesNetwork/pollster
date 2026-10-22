@@ -64,16 +64,14 @@ public final class DefaultSurveyService implements SurveyService {
 
     /** Runs {@code work} on the database executor and hands the result back on the main thread. */
     private <T> CompletableFuture<T> onDatabase(Supplier<T> work) {
-        return CompletableFuture.supplyAsync(work, this.exec.database())
-                .thenApplyAsync(value -> value, this.exec.mainThread());
+        return this.exec.onMainThread(CompletableFuture.supplyAsync(work, this.exec.database()));
     }
 
     // ---- locks and cached state ----------------------------------------------------------
 
     @Override
     public @NotNull CompletableFuture<Map<String, SurveyLock>> refreshLocks() {
-        return CompletableFuture.supplyAsync(this::loadStates, this.exec.database())
-                .thenApplyAsync(this::applyStates, this.exec.mainThread());
+        return this.exec.onMainThread(CompletableFuture.supplyAsync(this::loadStates, this.exec.database())).thenApply(this::applyStates);
     }
 
     /**

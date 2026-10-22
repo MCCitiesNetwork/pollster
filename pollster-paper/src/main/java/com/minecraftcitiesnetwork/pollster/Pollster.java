@@ -167,7 +167,7 @@ public final class Pollster extends JavaPlugin {
         }
         // Captured on the calling (main) thread, before the store or the locks change.
         Set<String> okBefore = wired.surveysWithLockOk();
-        return CompletableFuture.supplyAsync(() -> {
+        return exec.onMainThread(CompletableFuture.supplyAsync(() -> {
                     try {
                         Settings newSettings = loader.load("settings.yml", Settings.class);
                         Messages newMessages = loader.loadMessages();
@@ -175,12 +175,12 @@ public final class Pollster extends JavaPlugin {
                     } catch (Exception ex) {
                         throw new IllegalStateException("Reload failed: " + ex.getMessage(), ex);
                     }
-                }, exec.database())
-                .thenApplyAsync(loaded -> {
+                }, exec.database()))
+                .thenApply(loaded -> {
                     this.settings.set(loaded.settings());
                     this.messages.set(loaded.messages());
                     return loaded.report();
-                }, exec.mainThread())
+                })
                 .thenCompose(report -> surveyService.refreshLocks().thenApply(locks -> {
                     // Players mid-survey must not submit answers to questions that changed under them.
                     wired.endSessionsLostOnReload(okBefore);
