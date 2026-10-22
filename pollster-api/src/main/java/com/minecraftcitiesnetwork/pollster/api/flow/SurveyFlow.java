@@ -93,8 +93,9 @@ public final class SurveyFlow {
         }
         Question question = current.get();
         Answer stored = answer;
-        if (answer instanceof Answer.Text text && text.value().isBlank() && !question.required()) {
-            // An empty reply to an optional text question means "nothing to say".
+        if (!question.required() && isEmpty(answer)) {
+            // An empty reply to an optional question (blank text, nothing ticked) means "nothing to
+            // say". Storing it as a skip keeps it apart from a question that was hidden.
             stored = new Answer.Skipped();
         } else {
             AnswerResult.Reason problem = check(question, answer);
@@ -255,6 +256,11 @@ public final class SurveyFlow {
                 yield count > question.effectiveMax() ? AnswerResult.Reason.TOO_MANY : null;
             }
         };
+    }
+
+    private static boolean isEmpty(Answer answer) {
+        return answer instanceof Answer.Text text && text.value().isBlank()
+                || answer instanceof Answer.Choices choices && choices.optionKeys().isEmpty();
     }
 
     private static Set<String> optionKeys(Question question) {

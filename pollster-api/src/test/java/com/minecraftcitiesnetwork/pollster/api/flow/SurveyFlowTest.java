@@ -184,4 +184,13 @@ class SurveyFlowTest {
         flow.back();
         assertEquals(start + 3, flow.step());
     }
+
+    @Test
+    void answer_emptyChoicesOnOptionalMultiple_recordsSkipped() {
+        Question optional = new Question("q1", QuestionType.MULTIPLE, "Pick some", AB, false, 0, 0, null);
+        SurveyFlow flow = flow(optional, text("q2", true));
+        assertTrue(flow.answer(new Answer.Choices(Set.of())) instanceof AnswerResult.Accepted);
+        assertEquals(new Answer.Skipped(), flow.answerFor("q1").orElseThrow());
+        assertEquals("q2", currentKey(flow));
+    }
 }
