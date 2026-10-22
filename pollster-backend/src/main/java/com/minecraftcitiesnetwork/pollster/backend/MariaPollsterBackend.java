@@ -1,19 +1,28 @@
 package com.minecraftcitiesnetwork.pollster.backend;
 
+import com.minecraftcitiesnetwork.pollster.api.report.QuestionTally;
+import com.minecraftcitiesnetwork.pollster.api.report.ReportData;
+import com.minecraftcitiesnetwork.pollster.api.report.TextAnswer;
 import com.minecraftcitiesnetwork.pollster.api.result.OpenResult;
 import com.minecraftcitiesnetwork.pollster.api.result.SubmitResult;
 import com.minecraftcitiesnetwork.pollster.backend.mapper.AnswerMapper;
 import com.minecraftcitiesnetwork.pollster.backend.mapper.PlayerStateMapper;
+import com.minecraftcitiesnetwork.pollster.backend.mapper.ReportMapper;
 import com.minecraftcitiesnetwork.pollster.backend.mapper.ResponseMapper;
 import com.minecraftcitiesnetwork.pollster.backend.mapper.SurveyStateMapper;
 import org.apache.ibatis.session.SqlSession;
 
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.UUID;
 
@@ -141,6 +150,47 @@ public final class MariaPollsterBackend implements PollsterBackend {
     public Optional<Instant> lastFeatured(UUID player) {
         try (SqlSession session = this.database.openSession()) {
             return Optional.ofNullable(session.getMapper(PlayerStateMapper.class).lastFeatured(player));
+        }
+    }
+
+    @Override
+    public ReportData reportData(String surveyId) {
+        try (SqlSession session = this.database.openSession()) {
+            ReportMapper mapper = session.getMapper(ReportMapper.class);
+            Map<String, Object> summary = mapper.summary(surveyId);
+            int participants = ((Number) summary.get("participants")).intValue();
+            Object average = summary.get("averageSeconds");
+            OptionalDouble averageSeconds = average == null
+                    ? OptionalDouble.empty() : OptionalDouble.of(((Number) average).doubleValue());
+
+            Map<String, int[]> counts = new LinkedHashMap<>();
+            for (Map<String, Object> row : mapper.respondentCounts(surveyId)) {
+                counts.put((String) row.get("questionKey"), new int[]{
+                        ((Number) row.get("answered")).intValue(), ((Number) row.get("skipped")).intValue()});
+            }
+            Map<String, Map<String, Integer>> votes = new HashMap<>();
+            for (Map<String, Object> row : mapper.optionVotes(surveyId)) {
+                votes.computeIfAbsent((String) row.get("questionKey"), k -> new LinkedHashMap<>())
+                        .put((String) row.get("optionKey"), ((Number) row.get("votes")).intValue());
+            }
+            Map<String, Map<Integer, Integer>> selections = new HashMap<>();
+            for (Map<String, Object> row : mapper.selectionCounts(surveyId)) {
+                selections.computeIfAbsent((String) row.get("questionKey"), k -> new HashMap<>())
+                        .put(((Number) row.get("selections")).intValue(),
+                                ((Number) row.get("respondents")).intValue());
+            }
+            Map<String, List<TextAnswer>> texts = new HashMap<>();
+            for (Map<String, Object> row : mapper.texts(surveyId)) {
+                texts.computeIfAbsent((String) row.get("questionKey"), k -> new ArrayList<>())
+                        .add(new TextAnswer((String) row.get("textValue"), (String) row.get("playerName"),
+                                ((Timestamp) row.get("submittedAt")).toInstant()));
+            }
+
+            Map<String, QuestionTally> tallies = new HashMap<>();
+            counts.forEach((key, pair) -> tallies.put(key, new QuestionTally(pair[0], pair[1],
+                    votes.getOrDefault(key, Map.of()), selections.getOrDefault(key, Map.of()),
+                    texts.getOrDefault(key, List.of()))));
+            return new ReportData(participants, averageSeconds, tallies);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.backend;
 
+import com.minecraftcitiesnetwork.pollster.api.report.ReportData;
 import com.minecraftcitiesnetwork.pollster.api.result.OpenResult;
 import com.minecraftcitiesnetwork.pollster.api.result.SubmitResult;
 
@@ -34,4 +35,6 @@ public interface PollsterBackend {
     Optional<Instant> lastFeatured(UUID player);
 
     void markFeatured(UUID player, Instant now);
+
+    ReportData reportData(String surveyId);
 }

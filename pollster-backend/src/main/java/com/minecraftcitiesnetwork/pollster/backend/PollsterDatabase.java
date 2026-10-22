@@ -2,6 +2,7 @@ package com.minecraftcitiesnetwork.pollster.backend;
 
 import com.minecraftcitiesnetwork.pollster.backend.mapper.AnswerMapper;
 import com.minecraftcitiesnetwork.pollster.backend.mapper.PlayerStateMapper;
+import com.minecraftcitiesnetwork.pollster.backend.mapper.ReportMapper;
 import com.minecraftcitiesnetwork.pollster.backend.mapper.ResponseMapper;
 import com.minecraftcitiesnetwork.pollster.backend.mapper.SurveyStateMapper;
 import org.apache.ibatis.datasource.pooled.PooledDataSource;
@@ -80,6 +81,7 @@ public final class PollsterDatabase implements AutoCloseable {
         configuration.addMapper(ResponseMapper.class);
         configuration.addMapper(AnswerMapper.class);
         configuration.addMapper(PlayerStateMapper.class);
+        configuration.addMapper(ReportMapper.class);
         return new SqlSessionFactoryBuilder().build(configuration);
     }
 
