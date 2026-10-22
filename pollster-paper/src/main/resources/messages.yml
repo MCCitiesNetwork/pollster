@@ -1,0 +1,23 @@
+# Pollster messages, written in MiniMessage (https://docs.advntr.dev/minimessage/format.html).
+#
+# <prefix> inserts the "prefix" message into any other message. Placeholders such as <text>,
+# <value> and <name> are filled in by the plugin; keep them where they are. Keys that are
+# missing from this file are added back with their default text when the plugin loads.
+
+prefix: '<gray>[<gold>Pollster</gold>]</gray> '
+
+# Building blocks the dialog screens use. <text> is the words shown; <value> is the thing a
+# label describes.
+ui:
+  style:
+    title: '<gold><bold><text>'
+    danger: '<red><bold><text>'
+    primary: '<green><bold><text>'
+    edit: '<yellow><bold><text>'
+    secondary: '<gray><text>'
+    label: '<aqua><text>: </aqua><gray><value>'
+    error: '<red><text>'
+
+errors:
+  # Any stale dialog button: the survey was closed, reloaded or deleted, or the session ended.
+  survey-unavailable: '<prefix><red>This survey is no longer available.'
