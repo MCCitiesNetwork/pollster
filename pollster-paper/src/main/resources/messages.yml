@@ -67,6 +67,8 @@ export:
 
 # Player-facing survey screens. <name>, <count>, <position>, <total>, <min>, <max> are filled in.
 survey:
+  # /surveys or /surveys resume run from the console: surveys open as a dialog.
+  player-only: '<prefix><red>Surveys open as a dialog, so only players can use this command.'
   list:
     empty: '<gray>There are no surveys available right now.'
     load-failed: '<red>The surveys could not be loaded. Try again in a moment.'

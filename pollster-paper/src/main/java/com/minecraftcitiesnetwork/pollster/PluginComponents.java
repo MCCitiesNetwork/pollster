@@ -110,7 +110,7 @@ public final class PluginComponents {
 
     /** Registers {@code /surveys} and every {@code /pollster} subcommand on one manager. */
     public void registerCommands(@NotNull CommandManager<Source> manager) {
-        new SurveysCommand(this.playerFlow).register(manager);
+        new SurveysCommand(this.playerFlow, this.messages).register(manager);
         // PollsterCommand and ReportCommands both build from the "pollster" literal; Cloud merges
         // commands that share a root into one tree node.
         new PollsterCommand(this.adminUi, this.renderer, this.reloader, this.messages).register(manager);

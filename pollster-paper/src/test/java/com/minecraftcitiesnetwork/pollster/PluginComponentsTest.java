@@ -105,6 +105,25 @@ class PluginComponentsTest {
     }
 
     @Test
+    void surveys_fromConsoleRepliesPlayerOnly() {
+        this.messages.get().setMessage("survey.player-only", "Players only.");
+        this.components.registerCommands(this.manager);
+        for (String command : List.of("surveys", "surveys resume")) {
+            CommandSender sender = Mockito.mock(CommandSender.class);
+            Source console = Mockito.mock(Source.class);
+            Mockito.when(console.source()).thenReturn(sender);
+
+            this.manager.commandExecutor().executeCommand(console, command).join();
+
+            org.mockito.ArgumentCaptor<net.kyori.adventure.text.Component> sent =
+                    org.mockito.ArgumentCaptor.forClass(net.kyori.adventure.text.Component.class);
+            Mockito.verify(sender).sendMessage(sent.capture());
+            assertEquals("Players only.", net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+                    .plainText().serialize(sent.getValue()), command);
+        }
+    }
+
+    @Test
     void endSessionsLostOnReload_endsOnlySurveysThatStoppedBeingOk() {
         SurveyDefinition changed = survey("changed");
         SurveyDefinition kept = survey("kept");

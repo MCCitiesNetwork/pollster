@@ -77,6 +77,7 @@ public final class MessageKeys {
     public static final String SURVEY_LIST_IN_PROGRESS = "survey.list-state.in-progress";
     public static final String SURVEY_LIST_NEW = "survey.list-state.new";
     public static final String SURVEY_TEXT_ANSWER_LABEL = "survey.text-answer-label";
+    public static final String SURVEY_PLAYER_ONLY = "survey.player-only";
 
     // Admin editor (/pollster).
     public static final String EDITOR_OPEN_WARNING = "editor.open-warning";
