@@ -273,7 +273,7 @@ When a player joins and `featured.on-join` is enabled, Pollster looks for a
 featured OPEN survey the player may take and has not completed. If it finds
 one, and the player has not been shown a featured survey within the cooldown,
 it opens the intro dialog after the configured delay. The intro then also has
-a **Not now** button. Showing the dialog records the time in `player_state`.
+a **Not now** button. Showing the dialog records the time in `pollster_player_state`.
 
 When several surveys are featured, the oldest opened one is shown first.
 
@@ -447,20 +447,21 @@ Loading (a notice with no buttons, shown while a database call runs).
 
 ### Schema
 
-MariaDB. Migrations are SQL files in
+MariaDB. Every table is prefixed `pollster_` so the database can be shared
+with other plugins. Migrations are SQL files in
 `pollster-backend/src/main/resources/sql/migrations/V{n}__{name}.sql`, applied
-in order by a migrator that records each version in `schema_version`, commits
+in order by plugin-infrastructure's `SchemaMigrator` that records each version in `pollster_schema_version`, commits
 after each step, and refuses to start against a schema newer than it knows.
 
 ```sql
-CREATE TABLE survey_state (
+CREATE TABLE pollster_survey_state (
   survey_id     VARCHAR(48) PRIMARY KEY,
   content_hash  CHAR(64)    NOT NULL,
   opened_at     TIMESTAMP   NOT NULL,
   closed_at     TIMESTAMP   NULL
 );
 
-CREATE TABLE responses (
+CREATE TABLE pollster_responses (
   id            BIGINT AUTO_INCREMENT PRIMARY KEY,
   survey_id     VARCHAR(48) NOT NULL,
   player_uuid   BINARY(16)  NOT NULL,
@@ -471,17 +472,17 @@ CREATE TABLE responses (
   KEY ix_survey (survey_id)
 );
 
-CREATE TABLE answers (
+CREATE TABLE pollster_answers (
   id            BIGINT AUTO_INCREMENT PRIMARY KEY,
   response_id   BIGINT       NOT NULL,
   question_key  VARCHAR(48)  NOT NULL,
   option_key    VARCHAR(48)  NULL,
   text_value    TEXT         NULL,
-  FOREIGN KEY (response_id) REFERENCES responses(id) ON DELETE CASCADE,
+  FOREIGN KEY (response_id) REFERENCES pollster_responses(id) ON DELETE CASCADE,
   KEY ix_question (response_id, question_key)
 );
 
-CREATE TABLE player_state (
+CREATE TABLE pollster_player_state (
   player_uuid       BINARY(16) PRIMARY KEY,
   last_featured_at  TIMESTAMP  NULL
 );
