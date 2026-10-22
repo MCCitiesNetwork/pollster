@@ -16,6 +16,12 @@ public final class MessageKeys {
     public static final String UI_STYLE_LABEL = "ui.style.label";
     public static final String UI_STYLE_ERROR = "ui.style.error";
 
+    public static final String UI_BUTTON_CONFIRM = "ui.button.confirm";
+    public static final String UI_BUTTON_CANCEL = "ui.button.cancel";
+    public static final String UI_BUTTON_OK = "ui.button.ok";
+    public static final String UI_TITLE_ERROR = "ui.title.error";
+    public static final String UI_LOADING = "ui.loading";
+
     /** Shown for any stale dialog button: survey closed, reloaded, deleted, or session ended. */
     public static final String SURVEY_UNAVAILABLE = "errors.survey-unavailable";
 

@@ -77,4 +77,14 @@ class CommonScreensTest {
         assertEquals("<red>x", plain(c));
         assertEquals(NamedTextColor.GOLD, c.color());
     }
+
+    @Test
+    void confirm_usesConfiguredButtonWords() {
+        MessageContainer messages = new MessageContainer();
+        messages.setMessage("ui.button.confirm", "Yes");
+        messages.setMessage("ui.button.cancel", "No");
+        Screen s = Screens.confirm(new Style(messages), Component.text("T"), Component.text("M"), c -> { }, c -> { });
+        assertEquals("Yes", plain(s.buttons().get(0).label()));
+        assertEquals("No", plain(s.buttons().get(1).label()));
+    }
 }

@@ -1,7 +1,9 @@
 package com.minecraftcitiesnetwork.pollster.ui;
 
 import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
+import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -30,6 +32,11 @@ public final class Style {
         DEFAULTS.setMessage(SECONDARY, "<gray><text>");
         DEFAULTS.setMessage(LABEL, "<aqua><text>: <gray><value>");
         DEFAULTS.setMessage(ERROR, "<red><text>");
+        DEFAULTS.setMessage(MessageKeys.UI_BUTTON_CONFIRM, "Confirm");
+        DEFAULTS.setMessage(MessageKeys.UI_BUTTON_CANCEL, "Cancel");
+        DEFAULTS.setMessage(MessageKeys.UI_BUTTON_OK, "OK");
+        DEFAULTS.setMessage(MessageKeys.UI_TITLE_ERROR, "Error");
+        DEFAULTS.setMessage(MessageKeys.UI_LOADING, "Loading...");
     }
 
     private final MessageContainer messages;
@@ -72,6 +79,15 @@ public final class Style {
 
     public @NotNull Component error(@NotNull String text) {
         return render(ERROR, text);
+    }
+
+    /**
+     * A configurable word such as a button label, as plain text. It is fed back through the
+     * styles above, which insert it unparsed, so only the style (not the label) carries markup.
+     */
+    public @NotNull String word(@NotNull String key) {
+        MessageContainer source = this.messages.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : this.messages;
+        return PlainTextComponentSerializer.plainText().serialize(source.messageFor(key));
     }
 
     private @NotNull Component render(@NotNull String key, @NotNull String text) {

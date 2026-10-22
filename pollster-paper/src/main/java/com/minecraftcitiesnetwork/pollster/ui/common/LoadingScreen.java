@@ -12,6 +12,6 @@ public final class LoadingScreen {
     }
 
     public static @NotNull Screen create(@NotNull Style style, @NotNull String title) {
-        return Screens.loading(style.title(title));
+        return Screens.loading(style, style.title(title));
     }
 }
