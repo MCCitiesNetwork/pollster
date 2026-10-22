@@ -29,3 +29,15 @@ ui:
 errors:
   # Any stale dialog button: the survey was closed, reloaded or deleted, or the session ended.
   survey-unavailable: '<prefix><red>This survey is no longer available.'
+
+report:
+  player-only: '<prefix><red>Reports open as a dialog, so run this as a player. Use /pollster publish or /pollster export from the console.'
+  unknown-survey: '<prefix><red>There is no survey with the id <id>.'
+
+publish:
+  success: '<prefix><green>Report published. Open it here: <link>'
+  failed: '<prefix><red>Could not publish the report: <reason>'
+
+export:
+  success: '<prefix><green>Report exported to <path>'
+  failed: '<prefix><red>Could not export the report: <reason>'
