@@ -1,6 +1,5 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
-import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.SurveyService;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
@@ -9,6 +8,7 @@ import com.minecraftcitiesnetwork.pollster.session.PlayerSession;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
 import com.minecraftcitiesnetwork.pollster.ui.Screens;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
 

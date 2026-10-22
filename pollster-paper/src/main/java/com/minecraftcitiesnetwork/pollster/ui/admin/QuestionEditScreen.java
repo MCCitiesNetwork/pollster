@@ -1,6 +1,5 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
-import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.api.condition.ConditionParseException;
 import com.minecraftcitiesnetwork.pollster.api.condition.ConditionParser;
 import com.minecraftcitiesnetwork.pollster.api.model.Option;
@@ -13,6 +12,7 @@ import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Input;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.ui.common.ConfirmScreen;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;

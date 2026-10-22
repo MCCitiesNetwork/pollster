@@ -1,6 +1,5 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
-import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
 import com.minecraftcitiesnetwork.pollster.api.flow.Answer;
 import com.minecraftcitiesnetwork.pollster.api.flow.AnswerResult;
@@ -13,6 +12,7 @@ import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Input;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.jetbrains.annotations.NotNull;

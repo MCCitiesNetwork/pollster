@@ -1,11 +1,11 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
-import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;

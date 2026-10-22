@@ -1,7 +1,5 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
-import net.kyori.adventure.text.JoinConfiguration;
-import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.api.event.SurveyCompletedEvent;
 import com.minecraftcitiesnetwork.pollster.api.event.SurveySubmitEvent;
 import com.minecraftcitiesnetwork.pollster.api.flow.Answer;
@@ -15,7 +13,9 @@ import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
 import com.minecraftcitiesnetwork.pollster.ui.Screens;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 

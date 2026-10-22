@@ -1,12 +1,12 @@
 package com.minecraftcitiesnetwork.pollster.ui.player;
 
-import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import org.jetbrains.annotations.NotNull;
 
 /** Shown after a response is saved, or at the end of a preview. */
