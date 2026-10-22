@@ -125,4 +125,18 @@ class ConditionParserTest {
     void parse_rejectsUnbalancedParenthesis() {
         fails("(answer(q) answered");
     }
+
+    @Test
+    void parse_rejectsNestingDeeperThan32() {
+        String deep = "(".repeat(40) + "permission(\"a.b\")" + ")".repeat(40);
+        fails(deep);
+        String nots = "not ".repeat(40) + "permission(\"a.b\")";
+        fails(nots);
+    }
+
+    @Test
+    void parse_acceptsNestingAtTheLimit() throws Exception {
+        String ok = "(".repeat(32) + "permission(\"a.b\")" + ")".repeat(32);
+        ConditionParser.parse(ok);
+    }
 }
