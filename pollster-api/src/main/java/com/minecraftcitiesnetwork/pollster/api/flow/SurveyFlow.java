@@ -37,6 +37,8 @@ public final class SurveyFlow {
     private final Map<String, Answer> given = new HashMap<>();
     /** Index into the question list; equals the question count while on the review screen. */
     private int cursor;
+    /** Counts every move (answer, skip, back) so a screen can tell it was built for an earlier step. */
+    private int step;
 
     public SurveyFlow(SurveyDefinition survey, Predicate<String> hasPermission, Instant startedAt) {
         this(survey, hasPermission, startedAt, DEFAULT_TEXT_MAX);
@@ -91,8 +93,9 @@ public final class SurveyFlow {
         }
         Question question = current.get();
         Answer stored = answer;
-        if (answer instanceof Answer.Text text && text.value().isBlank() && !question.required()) {
-            // An empty reply to an optional text question means "nothing to say".
+        if (!question.required() && isEmpty(answer)) {
+            // An empty reply to an optional question (blank text, nothing ticked) means "nothing to
+            // say". Storing it as a skip keeps it apart from a question that was hidden.
             stored = new Answer.Skipped();
         } else {
             AnswerResult.Reason problem = check(question, answer);
@@ -122,6 +125,7 @@ public final class SurveyFlow {
         for (int i = this.cursor - 1; i >= 0; i--) {
             if (visible.get(i)) {
                 this.cursor = i;
+                this.step++;
                 return true;
             }
         }
@@ -138,6 +142,14 @@ public final class SurveyFlow {
             }
         }
         return position;
+    }
+
+    /**
+     * How many moves the flow has made. A dialog captures it when built; a click that arrives after
+     * another click already moved the flow sees a different value and must not act again.
+     */
+    public int step() {
+        return this.step;
     }
 
     public int visibleCount() {
@@ -172,6 +184,7 @@ public final class SurveyFlow {
             }
         }
         this.cursor = nextVisibleAtOrAfter(this.cursor + 1);
+        this.step++;
     }
 
     private int nextVisibleAtOrAfter(int from) {
@@ -243,6 +256,11 @@ public final class SurveyFlow {
                 yield count > question.effectiveMax() ? AnswerResult.Reason.TOO_MANY : null;
             }
         };
+    }
+
+    private static boolean isEmpty(Answer answer) {
+        return answer instanceof Answer.Text text && text.value().isBlank()
+                || answer instanceof Answer.Choices choices && choices.optionKeys().isEmpty();
     }
 
     private static Set<String> optionKeys(Question question) {

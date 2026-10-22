@@ -16,6 +16,10 @@ public record AnswerRowInput(String questionKey, @Nullable String optionKey, @Nu
             switch (answer) {
                 case Answer.Choice choice -> rows.add(new AnswerRowInput(key, choice.optionKey(), null));
                 case Answer.Choices choices -> {
+                    if (choices.optionKeys().isEmpty()) {
+                        // Nothing ticked is a skip; with no row the respondent would read as "hidden".
+                        rows.add(new AnswerRowInput(key, null, null));
+                    }
                     for (String optionKey : choices.optionKeys()) {
                         rows.add(new AnswerRowInput(key, optionKey, null));
                     }

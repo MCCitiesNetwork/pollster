@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,7 +32,9 @@ public final class SurveyStore {
     private final Path surveysDir;
     private final Logger log;
     private final SurveyFileCodec codec = new SurveyFileCodec();
-    // Replaced wholesale on reload so readers never see a half-loaded set.
+    // Replaced wholesale so readers never see a half-loaded set. Writers (save, delete, loadAll)
+    // are synchronized: they run on a multi-thread pool, and two unsynchronized copy-and-swap
+    // updates would drop one survey from memory.
     private volatile Map<String, SurveyDefinition> surveys = Map.of();
 
     public SurveyStore(Path surveysDir, Logger log) {
@@ -39,7 +42,7 @@ public final class SurveyStore {
         this.log = log;
     }
 
-    public LoadReport loadAll() {
+    public synchronized LoadReport loadAll() {
         Map<String, SurveyDefinition> loaded = new LinkedHashMap<>();
         Map<String, String> failures = new LinkedHashMap<>();
         for (Path file : listFiles()) {
@@ -129,14 +132,17 @@ public final class SurveyStore {
         return this.surveys.containsKey(id);
     }
 
-    public void save(SurveyDefinition s) throws IOException {
+    public synchronized void save(SurveyDefinition s) throws IOException {
         List<ValidationProblem> problems = SurveyValidator.validate(s);
         if (!problems.isEmpty()) {
             throw new IllegalArgumentException(join(problems));
         }
         Files.createDirectories(this.surveysDir);
         Path target = this.surveysDir.resolve(s.id() + EXTENSION);
-        Path temp = this.surveysDir.resolve(s.id() + EXTENSION + ".tmp");
+        // A unique temp name per write, so no two writes can ever share or delete each other's file.
+        // It does not end in .yml, so loadAll never reads a leftover one. (Files.createTempFile is
+        // avoided because it makes the file owner-only, which the moved survey file would keep.)
+        Path temp = this.surveysDir.resolve(s.id() + EXTENSION + "." + UUID.randomUUID() + ".tmp");
         try {
             YamlConfigurationLoader loader = loader(temp);
             ConfigurationNode root = loader.createNode();
@@ -158,7 +164,7 @@ public final class SurveyStore {
         this.surveys = Map.copyOf(copy);
     }
 
-    public void delete(String id) throws IOException {
+    public synchronized void delete(String id) throws IOException {
         Files.deleteIfExists(this.surveysDir.resolve(id + EXTENSION));
         Map<String, SurveyDefinition> copy = new LinkedHashMap<>(this.surveys);
         copy.remove(id);

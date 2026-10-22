@@ -24,6 +24,8 @@ public final class MessageKeys {
 
     /** Shown for any stale dialog button: survey closed, reloaded, deleted, or session ended. */
     public static final String SURVEY_UNAVAILABLE = "errors.survey-unavailable";
+    /** A dialog button the player lacks the permission for. */
+    public static final String ERRORS_NO_PERMISSION = "errors.no-permission";
 
     public static final String PUBLISH_SUCCESS = "publish.success";
     public static final String PUBLISH_FAILED = "publish.failed";
@@ -58,6 +60,23 @@ public final class MessageKeys {
     public static final String SURVEY_NO_UNFINISHED = "survey.no-unfinished";
     public static final String SURVEY_SAVING = "survey.saving";
     public static final String REMINDER_MESSAGE = "reminder.message";
+
+    // Words on the player survey screens.
+    public static final String SURVEY_BUTTON_START = "survey.button.start";
+    public static final String SURVEY_BUTTON_NOT_NOW = "survey.button.not-now";
+    public static final String SURVEY_BUTTON_CLOSE = "survey.button.close";
+    public static final String SURVEY_BUTTON_YES = "survey.button.answer-yes";
+    public static final String SURVEY_BUTTON_NO = "survey.button.answer-no";
+    public static final String SURVEY_BUTTON_NEXT = "survey.button.next";
+    public static final String SURVEY_BUTTON_BACK = "survey.button.back";
+    public static final String SURVEY_BUTTON_SKIP = "survey.button.skip";
+    public static final String SURVEY_BUTTON_SUBMIT = "survey.button.submit";
+    public static final String SURVEY_BUTTON_CANCEL = "survey.button.cancel";
+    public static final String SURVEY_LIST_TITLE = "survey.list-title";
+    public static final String SURVEY_LIST_COMPLETED = "survey.list-state.completed";
+    public static final String SURVEY_LIST_IN_PROGRESS = "survey.list-state.in-progress";
+    public static final String SURVEY_LIST_NEW = "survey.list-state.new";
+    public static final String SURVEY_TEXT_ANSWER_LABEL = "survey.text-answer-label";
 
     // Admin editor (/pollster).
     public static final String EDITOR_OPEN_WARNING = "editor.open-warning";

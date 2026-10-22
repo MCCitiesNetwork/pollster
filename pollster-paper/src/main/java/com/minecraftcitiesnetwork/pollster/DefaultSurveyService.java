@@ -21,16 +21,19 @@ import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Combines survey files with database state. Blocking work runs on the database executor; every
@@ -45,6 +48,11 @@ public final class DefaultSurveyService implements SurveyService {
     // Replaced wholesale, so a reader never sees a half-updated map.
     private volatile Map<String, SurveyStateRecord> states = Map.of();
     private volatile Map<String, SurveyLock> locks = Map.of();
+    /**
+     * One monitor per survey id. Every file write re-reads the current definition and writes while
+     * holding it, so a status change and an editor save can never overwrite each other.
+     */
+    private final ConcurrentHashMap<String, Object> writeLocks = new ConcurrentHashMap<>();
 
     public DefaultSurveyService(@NotNull SurveyStore store, @NotNull PollsterBackend backend,
                                 @NotNull ExecutorState exec, @NotNull Logger log) {
@@ -78,10 +86,9 @@ public final class DefaultSurveyService implements SurveyService {
 
     private Map<String, SurveyStateRecord> loadStates() {
         Map<String, SurveyStateRecord> loaded = new HashMap<>();
+        // Drafts too: a file hand-edited back to DRAFT keeps its state row, and a state row means
+        // the survey has been opened, so its lock must still be checked.
         for (SurveyDefinition survey : this.store.all()) {
-            if (survey.status() == SurveyStatus.DRAFT) {
-                continue;
-            }
             this.backend.state(survey.id()).ifPresent(state -> loaded.put(survey.id(), state));
         }
         return loaded;
@@ -103,9 +110,6 @@ public final class DefaultSurveyService implements SurveyService {
     }
 
     private SurveyLock computeLock(SurveyDefinition survey) {
-        if (survey.status() == SurveyStatus.DRAFT) {
-            return SurveyLock.NOT_OPENED;
-        }
         SurveyStateRecord state = this.states.get(survey.id());
         if (state == null) {
             return SurveyLock.NOT_OPENED;
@@ -165,22 +169,35 @@ public final class DefaultSurveyService implements SurveyService {
         if (found.isEmpty()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("No survey '" + surveyId + "'."));
         }
-        SurveyDefinition survey = found.get();
-        List<ValidationProblem> problems = SurveyValidator.validate(survey);
-        if (!problems.isEmpty()) {
-            return CompletableFuture.failedFuture(new IllegalStateException(
-                    "Survey '" + surveyId + "' cannot be opened: " + describe(problems)));
+        // Checked up front for a quick answer, and again inside the write against the current file.
+        try {
+            checkOpenable(found.get());
+        } catch (IllegalStateException e) {
+            return CompletableFuture.failedFuture(e);
         }
-        String hash = ContentHash.of(survey);
-        return onDatabase(() -> {
-            OpenResult result = this.backend.open(surveyId, hash, Instant.now());
-            writeStatus(survey, SurveyStatus.OPEN);
+        return onDatabase(() -> underWriteLock(surveyId, () -> {
+            SurveyDefinition current = current(surveyId);
+            checkOpenable(current);
+            OpenResult result = this.backend.open(surveyId, ContentHash.of(current), Instant.now());
+            writeFile(current.withStatus(SurveyStatus.OPEN));
             return new Opening(result, this.backend.state(surveyId));
-        }).thenApply(opening -> {
+        })).thenApply(opening -> {
             setState(surveyId, opening.state());
             recomputeLock(surveyId);
             return opening.result();
         });
+    }
+
+    private static void checkOpenable(SurveyDefinition survey) {
+        if (survey.status() != SurveyStatus.DRAFT) {
+            throw new IllegalStateException("Survey '" + survey.id() + "' is "
+                    + survey.status().name().toLowerCase(Locale.ROOT) + "; only a draft can be opened.");
+        }
+        List<ValidationProblem> problems = SurveyValidator.validate(survey);
+        if (!problems.isEmpty()) {
+            throw new IllegalStateException(
+                    "Survey '" + survey.id() + "' cannot be opened: " + describe(problems));
+        }
     }
 
     private record Opening(OpenResult result, Optional<SurveyStateRecord> state) {
@@ -188,36 +205,36 @@ public final class DefaultSurveyService implements SurveyService {
 
     @Override
     public @NotNull CompletableFuture<Void> close(@NotNull String surveyId) {
-        return changeStatus(surveyId, SurveyStatus.CLOSED, () -> this.backend.close(surveyId, Instant.now()));
+        return changeStatus(surveyId, SurveyStatus.OPEN, SurveyStatus.CLOSED,
+                () -> this.backend.close(surveyId, Instant.now()));
     }
 
     @Override
     public @NotNull CompletableFuture<Void> reopen(@NotNull String surveyId) {
-        return changeStatus(surveyId, SurveyStatus.OPEN, () -> this.backend.reopen(surveyId));
+        return changeStatus(surveyId, SurveyStatus.CLOSED, SurveyStatus.OPEN, () -> this.backend.reopen(surveyId));
     }
 
-    private CompletableFuture<Void> changeStatus(String surveyId, SurveyStatus status, Runnable databaseStep) {
-        Optional<SurveyDefinition> found = this.store.get(surveyId);
-        if (found.isEmpty()) {
+    private CompletableFuture<Void> changeStatus(String surveyId, SurveyStatus from, SurveyStatus to,
+                                                 Runnable databaseStep) {
+        if (!this.store.exists(surveyId)) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("No survey '" + surveyId + "'."));
         }
-        SurveyDefinition survey = found.get();
-        return onDatabase(() -> {
+        return onDatabase(() -> underWriteLock(surveyId, () -> {
+            // The definition is read here, not on the main thread before the hop, so an editor
+            // save that landed in between is kept rather than overwritten by an older snapshot.
+            SurveyDefinition current = current(surveyId);
+            if (current.status() != from) {
+                throw new IllegalStateException("Survey '" + surveyId + "' is "
+                        + current.status().name().toLowerCase(Locale.ROOT) + ", not "
+                        + from.name().toLowerCase(Locale.ROOT) + ".");
+            }
             databaseStep.run();
-            writeStatus(survey, status);
+            writeFile(current.withStatus(to));
             return this.backend.state(surveyId);
-        }).thenAccept(state -> {
+        })).thenAccept(state -> {
             setState(surveyId, state);
             recomputeLock(surveyId);
         });
-    }
-
-    private void writeStatus(SurveyDefinition survey, SurveyStatus status) {
-        try {
-            this.store.save(survey.withStatus(status));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 
     @Override
@@ -226,14 +243,66 @@ public final class DefaultSurveyService implements SurveyService {
         if (!problems.isEmpty()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException(describe(problems)));
         }
-        return onDatabase(() -> {
-            try {
-                this.store.save(survey);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+        return onDatabase(() -> underWriteLock(survey.id(), () -> {
+            checkEditable(this.store.get(survey.id()).orElse(null), survey);
+            writeFile(survey);
             return (Void) null;
-        }).thenAccept(ignored -> recomputeLock(survey.id()));
+        })).thenAccept(ignored -> recomputeLock(survey.id()));
+    }
+
+    /**
+     * The content lock, enforced here so no caller can bypass it: status only moves through
+     * open, close and reopen; an open survey keeps its content hash (questions and anonymity);
+     * a closed survey does not change at all.
+     */
+    private static void checkEditable(@Nullable SurveyDefinition current, SurveyDefinition updated) {
+        String id = updated.id();
+        if (current == null) {
+            if (updated.status() != SurveyStatus.DRAFT) {
+                throw new IllegalStateException("A new survey must start as a draft; status changes only "
+                        + "through open, close and reopen.");
+            }
+            return;
+        }
+        if (updated.status() != current.status()) {
+            throw new IllegalStateException("Survey '" + id + "' cannot change status by saving; status changes "
+                    + "only through open, close and reopen.");
+        }
+        switch (current.status()) {
+            case DRAFT -> {
+            }
+            case OPEN -> {
+                if (!ContentHash.of(updated).equals(ContentHash.of(current))) {
+                    throw new IllegalStateException("Survey '" + id + "' is open, so its questions and anonymity "
+                            + "cannot change. Duplicate it to make a new version.");
+                }
+            }
+            case CLOSED -> {
+                if (!updated.equals(current)) {
+                    throw new IllegalStateException("Survey '" + id + "' is closed and cannot be edited. "
+                            + "Reopen or duplicate it first.");
+                }
+            }
+        }
+    }
+
+    private SurveyDefinition current(String surveyId) {
+        return this.store.get(surveyId).orElseThrow(
+                () -> new IllegalArgumentException("No survey '" + surveyId + "'."));
+    }
+
+    private <T> T underWriteLock(String surveyId, Supplier<T> work) {
+        synchronized (this.writeLocks.computeIfAbsent(surveyId, ignored -> new Object())) {
+            return work.get();
+        }
+    }
+
+    private void writeFile(SurveyDefinition survey) {
+        try {
+            this.store.save(survey);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @Override
@@ -253,14 +322,13 @@ public final class DefaultSurveyService implements SurveyService {
         SurveyDefinition s = source.get();
         SurveyDefinition copy = new SurveyDefinition(newId, s.name(), s.description(), SurveyStatus.DRAFT,
                 s.anonymous(), s.featured(), s.requiresPermission(), s.rewards(), s.questions());
-        return onDatabase(() -> {
-            try {
-                this.store.save(copy);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+        return onDatabase(() -> underWriteLock(newId, () -> {
+            if (this.store.exists(newId)) {
+                throw new IllegalArgumentException("A survey with id '" + newId + "' already exists.");
             }
+            writeFile(copy);
             return copy;
-        }).thenApply(saved -> {
+        })).thenApply(saved -> {
             recomputeLock(newId);
             return saved;
         });
@@ -268,7 +336,7 @@ public final class DefaultSurveyService implements SurveyService {
 
     @Override
     public @NotNull CompletableFuture<Void> delete(@NotNull String surveyId) {
-        return onDatabase(() -> {
+        return onDatabase(() -> underWriteLock(surveyId, () -> {
             this.backend.deleteSurveyData(surveyId);
             try {
                 this.store.delete(surveyId);
@@ -276,7 +344,7 @@ public final class DefaultSurveyService implements SurveyService {
                 throw new UncheckedIOException(e);
             }
             return (Void) null;
-        }).thenAccept(ignored -> {
+        })).thenAccept(ignored -> {
             setState(surveyId, Optional.empty());
             recomputeLock(surveyId);
         });
@@ -312,7 +380,15 @@ public final class DefaultSurveyService implements SurveyService {
         if (found.isEmpty()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("No survey '" + surveyId + "'."));
         }
-        return onDatabase(() -> ReportBuilder.build(found.get(), this.backend.reportData(surveyId)));
+        SurveyDefinition survey = found.get();
+        if (lock(surveyId) != SurveyLock.OK && !survey.anonymous()) {
+            // The file no longer matches what players answered under (anonymous: true -> false
+            // by hand, for example), so its anonymous flag cannot be trusted: hide names.
+            survey = new SurveyDefinition(survey.id(), survey.name(), survey.description(), survey.status(),
+                    true, survey.featured(), survey.requiresPermission(), survey.rewards(), survey.questions());
+        }
+        SurveyDefinition reported = survey;
+        return onDatabase(() -> ReportBuilder.build(reported, this.backend.reportData(surveyId)));
     }
 
     @Override

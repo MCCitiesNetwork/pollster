@@ -12,6 +12,7 @@ import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Input;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.jetbrains.annotations.NotNull;
@@ -50,6 +51,8 @@ public final class QuestionScreen {
             return ReviewScreen.create(ui, session);
         }
         Question question = current.get();
+        // Every button acts only while the flow is still on the step this screen was built for.
+        int step = flow.step();
         Screen.Builder builder = Screen.builder(PlayerScreens.title(ui, flow.survey(), session.preview()));
         if (error != null) {
             builder.body(error);
@@ -57,7 +60,7 @@ public final class QuestionScreen {
         builder.body(ui.messages().messageFor(MessageKeys.SURVEY_QUESTION_HEADER,
                 MessageContainer.value("position", Integer.toString(flow.position())),
                 MessageContainer.value("total", Integer.toString(flow.visibleCount()))));
-        builder.body(Component.text(question.text(), NamedTextColor.WHITE));
+        builder.body(StaffText.render(question.text()).colorIfAbsent(NamedTextColor.WHITE));
 
         Optional<Answer> existing = flow.answerFor(question.key());
         switch (question.type()) {
@@ -67,18 +70,19 @@ public final class QuestionScreen {
                         .map(a -> ((Answer.Choice) a).optionKey()).orElse(null);
                 for (Option option : question.options()) {
                     Component label = option.key().equals(chosen)
-                            ? Component.text("✔ " + option.label(), NamedTextColor.GREEN)
-                            : Component.text(option.label(), NamedTextColor.WHITE);
-                    builder.button(Button.of(label, ctx -> submit(ui, session, ctx,
+                            ? Component.text("✔ ", NamedTextColor.GREEN)
+                                    .append(StaffText.render(option.label()).colorIfAbsent(NamedTextColor.GREEN))
+                            : StaffText.render(option.label()).colorIfAbsent(NamedTextColor.WHITE);
+                    builder.button(Button.of(label, ctx -> submit(ui, session, ctx, step,
                             new Answer.Choice(option.key()), null)));
                 }
             }
             case YES_NO -> {
                 builder.columns(2);
-                builder.button(Button.of(ui.style().primary("Yes"),
-                        ctx -> submit(ui, session, ctx, new Answer.Choice("yes"), null)));
-                builder.button(Button.of(ui.style().danger("No"),
-                        ctx -> submit(ui, session, ctx, new Answer.Choice("no"), null)));
+                builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_YES)),
+                        ctx -> submit(ui, session, ctx, step, new Answer.Choice("yes"), null)));
+                builder.button(Button.of(ui.style().danger(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NO)),
+                        ctx -> submit(ui, session, ctx, step, new Answer.Choice("no"), null)));
             }
             case MULTIPLE -> {
                 Set<String> selected = draft != null ? draft.selected()
@@ -87,44 +91,44 @@ public final class QuestionScreen {
                 List<Option> options = question.options();
                 for (int i = 0; i < options.size(); i++) {
                     Option option = options.get(i);
-                    builder.input(new Input.BoolInput(OPTION_PREFIX + i, Component.text(option.label()),
+                    builder.input(new Input.BoolInput(OPTION_PREFIX + i, StaffText.render(option.label()),
                             selected.contains(option.key())));
                 }
-                builder.button(Button.of(ui.style().primary("Next"), ctx -> {
+                builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NEXT)), ctx -> {
                     Set<String> ticked = new LinkedHashSet<>();
                     for (int i = 0; i < options.size(); i++) {
                         if (Boolean.TRUE.equals(ctx.bool(OPTION_PREFIX + i))) {
                             ticked.add(options.get(i).key());
                         }
                     }
-                    submit(ui, session, ctx, new Answer.Choices(ticked), new Draft(null, ticked));
+                    submit(ui, session, ctx, step, new Answer.Choices(ticked), new Draft(null, ticked));
                 }));
             }
             case TEXT -> {
                 String initial = draft != null && draft.text() != null ? draft.text()
                         : existing.filter(Answer.Text.class::isInstance)
                         .map(a -> ((Answer.Text) a).value()).orElse("");
-                builder.input(new Input.TextInput(TEXT_KEY, Component.text("Your answer"), initial,
+                builder.input(new Input.TextInput(TEXT_KEY, Component.text(PlayerScreens.word(ui, MessageKeys.SURVEY_TEXT_ANSWER_LABEL)), initial,
                         ui.settings().textMaxLength(), true));
-                builder.button(Button.of(ui.style().primary("Next"), ctx -> {
+                builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NEXT)), ctx -> {
                     String text = ctx.text(TEXT_KEY);
                     String value = text == null ? "" : text;
-                    submit(ui, session, ctx, new Answer.Text(value), new Draft(value, Set.of()));
+                    submit(ui, session, ctx, step, new Answer.Text(value), new Draft(value, Set.of()));
                 }));
             }
         }
 
         // Back only makes sense once there is an earlier shown question to return to.
         if (flow.position() > 1) {
-            builder.button(Button.of(ui.style().secondary("Back"), ctx ->
-                    PlayerScreens.guarded(ui, session, ctx, () -> {
+            builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_BACK)), ctx ->
+                    PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                         flow.back();
                         ctx.open(PlayerScreens.current(ui, session));
                     })));
         }
         if (!question.required()) {
-            builder.button(Button.of(ui.style().edit("Skip"), ctx ->
-                    PlayerScreens.guarded(ui, session, ctx, () -> {
+            builder.button(Button.of(ui.style().edit(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_SKIP)), ctx ->
+                    PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                         flow.skip();
                         ui.sounds().next(ctx.player());
                         ctx.open(PlayerScreens.current(ui, session));
@@ -133,9 +137,9 @@ public final class QuestionScreen {
         return builder.build();
     }
 
-    private static void submit(PlayerUi ui, PlayerSession session, ScreenContext ctx, Answer answer,
+    private static void submit(PlayerUi ui, PlayerSession session, ScreenContext ctx, int step, Answer answer,
                                @Nullable Draft draft) {
-        PlayerScreens.guarded(ui, session, ctx, () -> {
+        PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
             Question question = session.flow().current().orElse(null);
             AnswerResult result = session.flow().answer(answer);
             if (result instanceof AnswerResult.Invalid invalid && question != null) {

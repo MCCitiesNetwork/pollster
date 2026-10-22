@@ -181,10 +181,22 @@ class HubScreenTest {
     void hub_previewAndReportDelegate() {
         AdminFixture f = new AdminFixture(this.dir);
         AdminFixture.FakeContext ctx = f.context();
+        org.mockito.Mockito.when(f.player.hasPermission("pollster.admin.report")).thenReturn(true);
         Screen s = hub(f, valid(f, "poll-one", SurveyStatus.DRAFT), 0);
         button(s, "Preview").onClick().accept(ctx);
         button(s, "Report").onClick().accept(ctx);
         assertEquals(List.of("poll-one"), f.previews);
         assertEquals(List.of("poll-one"), f.reports);
+    }
+
+    @Test
+    void hub_reportNeedsReportPermission() {
+        AdminFixture f = new AdminFixture(this.dir);
+        f.messages.setMessage("errors.no-permission", "You may not see reports.");
+        AdminFixture.FakeContext ctx = f.context();
+        Screen s = hub(f, valid(f, "poll-one", SurveyStatus.DRAFT), 0);
+        button(s, "Report").onClick().accept(ctx);
+        assertTrue(f.reports.isEmpty());
+        assertTrue(plain(ctx.last()).contains("You may not see reports."), plain(ctx.last()));
     }
 }

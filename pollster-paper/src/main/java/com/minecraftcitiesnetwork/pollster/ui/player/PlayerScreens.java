@@ -8,6 +8,7 @@ import com.minecraftcitiesnetwork.pollster.session.PlayerSession;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
 import com.minecraftcitiesnetwork.pollster.ui.Screens;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,10 +22,15 @@ final class PlayerScreens {
     private PlayerScreens() {
     }
 
-    /** The survey name as title; previews carry a visible marker. Names are never parsed as markup. */
+    /** The survey name as title; previews carry a visible marker. Names are staff text (restricted markup). */
     static @NotNull Component title(@NotNull PlayerUi ui, @NotNull SurveyDefinition survey, boolean preview) {
-        Component title = ui.style().title(survey.name());
+        Component title = ui.style().title(StaffText.render(survey.name()));
         return preview ? title.append(ui.messages().messageFor(MessageKeys.SURVEY_PREVIEW_MARKER)) : title;
+    }
+
+    /** A configurable word from messages.yml as plain text, for the dialog styles to colour. */
+    static @NotNull String word(@NotNull PlayerUi ui, @NotNull String key) {
+        return ui.messages().plaintextMessageFor(key);
     }
 
     static @NotNull Screen unavailable(@NotNull PlayerUi ui) {
@@ -57,6 +63,22 @@ final class PlayerScreens {
         }
         ui.sessions().touch(id, ui.sessions().now());
         action.run();
+    }
+
+    /**
+     * Like {@link #guarded}, but the button also belongs to one step of the flow. A second click
+     * on a screen the first click already moved past (a double click races the new dialog) just
+     * shows where the player is now instead of answering the next question too.
+     */
+    static void guardedStep(@NotNull PlayerUi ui, @NotNull PlayerSession session, @NotNull ScreenContext ctx,
+                            int step, @NotNull Runnable action) {
+        guarded(ui, session, ctx, () -> {
+            if (session.flow().step() != step) {
+                ctx.open(current(ui, session));
+                return;
+            }
+            action.run();
+        });
     }
 
     /** The question the flow is on, or the review once every shown question is answered. */

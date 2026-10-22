@@ -12,6 +12,7 @@ import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Input;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.ui.common.ConfirmScreen;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -97,7 +98,7 @@ public final class QuestionEditScreen {
         Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_QUESTION_TITLE, v("key", AdminSupport.truncate(q.key(), 30)))));
         b.body(Component.text(t(ui, EDITOR_QUESTIONS_LOCKED_NOTE), NamedTextColor.GRAY));
         b.body(ui.style().label(t(ui, EDITOR_LABEL_KEY), Component.text(q.key())));
-        b.body(ui.style().label(t(ui, EDITOR_LABEL_TEXT), Component.text(q.text())));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_TEXT), StaffText.render(q.text())));
         b.body(ui.style().label(t(ui, EDITOR_LABEL_TYPE), Component.text(q.type().name())));
         b.body(ui.style().label(t(ui, EDITOR_LABEL_REQUIRED),
                 Component.text(t(ui, q.required() ? EDITOR_COMMON_ANSWER_YES : EDITOR_COMMON_ANSWER_NO))));

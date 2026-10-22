@@ -4,17 +4,21 @@ import com.minecraftcitiesnetwork.pollster.SurveyService.SurveyLock;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyIds;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
+import com.minecraftcitiesnetwork.pollster.command.ReportCommands;
 import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Input;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
+import com.minecraftcitiesnetwork.pollster.ui.Screens;
 import com.minecraftcitiesnetwork.pollster.ui.common.ConfirmScreen;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -57,7 +61,13 @@ public final class HubScreen {
                                          int responses) {
         String id = s.id();
         boolean draft = s.status() == SurveyStatus.DRAFT;
-        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_HUB_TITLE, v("name", AdminSupport.truncate(s.name(), 40)))));
+        // The template is plain text, but the survey name is staff-authored MiniMessage, so split
+        // the template at a marker and render the name with the restricted renderer in between.
+        String[] around = t(ui, EDITOR_HUB_TITLE, v("name", "\u0001")).split("\u0001", 2);
+        Component title = Component.text(around[0])
+                .append(StaffText.render(AdminSupport.truncate(s.name(), 40)))
+                .append(Component.text(around.length > 1 ? around[1] : ""));
+        Screen.Builder b = Screen.builder(ui.style().title(title));
         b.body(ui.style().label(t(ui, EDITOR_LABEL_ID), Component.text(id)));
         b.body(ui.style().label(t(ui, EDITOR_LABEL_STATUS), Component.text(s.status().name())));
         b.body(ui.style().label(t(ui, EDITOR_LABEL_RESPONSES), Component.text(responses)));
@@ -87,7 +97,7 @@ public final class HubScreen {
                 ctx -> toggle(ui, ctx, id, false, fresh -> copy(fresh, fresh.name(), fresh.description(),
                         fresh.anonymous(), fresh.featured(), !fresh.requiresPermission()))));
         b.button(Button.of(ui.style().edit(t(ui, EDITOR_HUB_PREVIEW)), ctx -> preview(ui, ctx, id)));
-        b.button(Button.of(ui.style().edit(t(ui, EDITOR_HUB_REPORT)), ctx -> ui.report().open(ctx.player(), id)));
+        b.button(Button.of(ui.style().edit(t(ui, EDITOR_HUB_REPORT)), ctx -> openReport(ui, ctx, id)));
         b.button(switch (s.status()) {
             case DRAFT -> Button.of(ui.style().primary(t(ui, EDITOR_HUB_OPEN)), ctx -> openSurvey(ui, ctx, id));
             case OPEN -> Button.of(ui.style().danger(t(ui, EDITOR_HUB_CLOSE)), ctx -> closeSurvey(ui, ctx, id));
@@ -100,6 +110,16 @@ public final class HubScreen {
     }
 
     // --- actions ---------------------------------------------------------------------------
+
+    /** The editor needs pollster.admin, but reports have their own node, as the command does. */
+    private static void openReport(AdminUi ui, ScreenContext ctx, String id) {
+        if (!ctx.player().hasPermission(ReportCommands.PERMISSION)) {
+            ctx.open(Screens.error(ui.style(), ui.messages().messageFor(MessageKeys.ERRORS_NO_PERMISSION),
+                    List.of(), back -> open(ui, back, id)));
+            return;
+        }
+        ui.report().open(ctx.player(), id);
+    }
 
     private static void current(AdminUi ui, ScreenContext ctx, String id, Consumer<SurveyDefinition> action) {
         ui.service().survey(id).ifPresentOrElse(action,

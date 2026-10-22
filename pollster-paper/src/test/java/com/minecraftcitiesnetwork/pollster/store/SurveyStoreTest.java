@@ -45,6 +45,11 @@ class SurveyStoreTest {
                         new Question("yn", QuestionType.YES_NO, "Sure?", List.of(), true, 0, 0, null)));
     }
 
+    private static SurveyDefinition withId(SurveyDefinition s, String id) {
+        return new SurveyDefinition(id, s.name(), s.description(), s.status(), s.anonymous(), s.featured(),
+                s.requiresPermission(), s.rewards(), s.questions());
+    }
+
     private SurveyStore store() {
         return new SurveyStore(this.dir, Logger.getAnonymousLogger());
     }
@@ -131,5 +136,65 @@ class SurveyStoreTest {
         assertFalse(yesNoBlock.contains("options"), yesNoBlock);
         String textBlock = text.substring(text.indexOf("key: text"), text.indexOf("key: many"));
         assertFalse(textBlock.contains("options"), textBlock);
+    }
+
+    @Test
+    void save_concurrentWritesKeepEverySurvey() throws Exception {
+        SurveyStore store = store();
+        int count = 40;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < count; i++) {
+                String id = "survey-" + i;
+                futures.add(pool.submit(() -> {
+                    go.await();
+                    store.save(withId(everything(), id));
+                    // Same id from several threads at once must not trip over a shared temp file.
+                    store.save(withId(everything(), "shared-one"));
+                    return null;
+                }));
+            }
+            go.countDown();
+            for (java.util.concurrent.Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(count + 1, store.all().size());
+        try (Stream<Path> files = Files.list(this.dir)) {
+            assertEquals(count + 1, files.count());
+        }
+    }
+
+    @Test
+    void loadAll_logsOneLinePerBrokenFile() throws Exception {
+        for (String name : List.of("good.yml", "bad-yaml.yml", "unknown-type.yml", "dup-keys.yml")) {
+            Files.copy(fixture(name), this.dir.resolve(name));
+        }
+        Logger log = Logger.getLogger("pollster-store-test-" + System.nanoTime());
+        log.setUseParentHandlers(false);
+        List<java.util.logging.LogRecord> records = new java.util.ArrayList<>();
+        log.addHandler(new java.util.logging.Handler() {
+            @Override public void publish(java.util.logging.LogRecord record) { records.add(record); }
+            @Override public void flush() { }
+            @Override public void close() { }
+        });
+        new SurveyStore(this.dir, log).loadAll();
+
+        assertEquals(3, records.size(), records.stream().map(java.util.logging.LogRecord::getMessage).toList()
+                .toString());
+        for (String name : List.of("bad-yaml.yml", "unknown-type.yml", "dup-keys.yml")) {
+            List<String> lines = records.stream().map(java.util.logging.LogRecord::getMessage)
+                    .filter(m -> m.contains(name)).toList();
+            assertEquals(1, lines.size(), name);
+            String line = lines.get(0);
+            assertTrue(line.startsWith("Skipping survey file " + name + ": "), line);
+            assertFalse(line.contains("\n") || line.contains("\r"), "one line only: " + line);
+            assertEquals(java.util.logging.Level.WARNING, records.stream()
+                    .filter(r -> r.getMessage().contains(name)).findFirst().orElseThrow().getLevel());
+        }
     }
 }

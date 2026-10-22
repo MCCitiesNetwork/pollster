@@ -82,7 +82,7 @@ public final class PluginComponents {
         SoundPlayer sounds = new SoundPlayer(() -> settings.get().sounds());
 
         PlayerUi playerUi = new PlayerUi(service, this.sessions, rewards, messages, style, settings, sounds,
-                server.getPluginManager()::callEvent);
+                server.getPluginManager()::callEvent, id -> Optional.ofNullable(server.getPlayer(id)));
         this.playerFlow = new PlayerFlow(playerUi, this.renderer::show);
 
         PasteClient paste = new PasteClient(HttpClient.newHttpClient(), exec.network());

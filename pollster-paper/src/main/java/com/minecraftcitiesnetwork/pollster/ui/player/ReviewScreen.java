@@ -13,7 +13,9 @@ import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
 import com.minecraftcitiesnetwork.pollster.ui.Screens;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /** Lists every shown question with the answer given, then Submit, Back or Cancel. */
 public final class ReviewScreen {
@@ -33,6 +34,7 @@ public final class ReviewScreen {
 
     public static @NotNull Screen create(@NotNull PlayerUi ui, @NotNull PlayerSession session) {
         SurveyDefinition survey = session.flow().survey();
+        int step = session.flow().step();
         Screen.Builder builder = Screen.builder(PlayerScreens.title(ui, survey, session.preview()));
         builder.body(ui.messages().messageFor(MessageKeys.SURVEY_REVIEW_INTRO));
         for (Map.Entry<String, Answer> entry : session.flow().answers().entrySet()) {
@@ -40,17 +42,18 @@ public final class ReviewScreen {
             if (question.isEmpty()) {
                 continue;
             }
-            // Question text and answers are inserted as components, never parsed, so markup typed
-            // by an admin or a player shows up literally.
-            builder.body(ui.style().label(question.get().text(), describe(ui, question.get(), entry.getValue())));
+            // Question text and option labels are staff text (restricted markup); a player's typed
+            // answer is never parsed, so markup in it shows up literally.
+            builder.body(ui.style().label(StaffText.render(question.get().text()),
+                    describe(ui, question.get(), entry.getValue())));
         }
-        builder.button(new Button(ui.style().primary("Submit"), null, BUTTON_WIDTH, ctx -> submit(ui, session, ctx)));
-        builder.button(new Button(ui.style().secondary("Back"), null, BUTTON_WIDTH, ctx ->
-                PlayerScreens.guarded(ui, session, ctx, () -> {
+        builder.button(new Button(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_SUBMIT)), null, BUTTON_WIDTH, ctx -> submit(ui, session, ctx)));
+        builder.button(new Button(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_BACK)), null, BUTTON_WIDTH, ctx ->
+                PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                     session.flow().back();
                     ctx.open(PlayerScreens.current(ui, session));
                 })));
-        builder.button(new Button(ui.style().secondary("Cancel"), null, BUTTON_WIDTH, ctx ->
+        builder.button(new Button(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_CANCEL)), null, BUTTON_WIDTH, ctx ->
                 PlayerScreens.guarded(ui, session, ctx, () -> {
                     ui.sessions().end(ctx.player().getUniqueId());
                     ctx.player().sendMessage(ui.messages().messageFor(MessageKeys.SURVEY_CANCELLED));
@@ -62,21 +65,21 @@ public final class ReviewScreen {
 
     private static Component describe(PlayerUi ui, Question question, Answer answer) {
         return switch (answer) {
-            case Answer.Choice choice -> Component.text(labelOf(question, choice.optionKey()));
-            case Answer.Choices choices -> Component.text(choices.optionKeys().stream()
-                    .map(key -> labelOf(question, key)).collect(Collectors.joining(", ")));
+            case Answer.Choice choice -> labelOf(question, choice.optionKey());
+            case Answer.Choices choices -> Component.join(JoinConfiguration.commas(true),
+                    choices.optionKeys().stream().map(key -> labelOf(question, key)).toList());
             case Answer.Text text -> Component.text(text.value());
             case Answer.Skipped skipped -> ui.messages().messageFor(MessageKeys.SURVEY_REVIEW_SKIPPED);
         };
     }
 
-    private static String labelOf(Question question, String key) {
+    private static Component labelOf(Question question, String key) {
         for (Option option : question.options()) {
             if (option.key().equals(key)) {
-                return option.label();
+                return StaffText.render(option.label());
             }
         }
-        return key;
+        return Component.text(key);
     }
 
     private static void submit(PlayerUi ui, PlayerSession session, ScreenContext ctx) {

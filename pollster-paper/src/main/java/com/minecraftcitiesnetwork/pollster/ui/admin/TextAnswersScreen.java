@@ -11,7 +11,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 
 import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
 
@@ -35,7 +39,8 @@ public final class TextAnswersScreen {
                     .button(back).build();
         }
 
-        List<TextAnswer> all = question.texts();
+        boolean showNames = !report.survey().anonymous();
+        List<TextAnswer> all = showNames ? question.texts() : shuffled(report, questionKey, question.texts());
         int pages = Math.max(1, (all.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         int current = Math.max(0, Math.min(page, pages - 1));
         Screen.Builder screen = Screen.builder(style.title(style.text(REPORT_ANSWERS_TITLE_PAGED,
@@ -45,7 +50,6 @@ public final class TextAnswersScreen {
         if (all.isEmpty()) {
             screen.body(Component.text(style.text(REPORT_ANSWERS_NONE), NamedTextColor.GRAY));
         }
-        boolean showNames = !report.survey().anonymous();
         for (int i = current * PAGE_SIZE; i < Math.min(all.size(), (current + 1) * PAGE_SIZE); i++) {
             TextAnswer answer = all.get(i);
             // Component.text keeps player input literal, so tags typed by players never render.
@@ -69,5 +73,17 @@ public final class TextAnswersScreen {
         }
         screen.button(back);
         return screen.columns(2).build();
+    }
+
+    /**
+     * Submission order could be matched against who was online, so anonymous answers are mixed.
+     * The seed depends only on this report, so every page of it sees the same order and paging
+     * never skips or repeats an answer.
+     */
+    private static List<TextAnswer> shuffled(SurveyReport report, String questionKey, List<TextAnswer> texts) {
+        List<TextAnswer> mixed = new ArrayList<>(texts);
+        long seed = Objects.hash(report.survey().id(), questionKey, texts.size(), report.participants());
+        Collections.shuffle(mixed, new Random(seed));
+        return mixed;
     }
 }

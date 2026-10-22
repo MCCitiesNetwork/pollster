@@ -10,12 +10,14 @@ import com.minecraftcitiesnetwork.pollster.ui.Button;
 import com.minecraftcitiesnetwork.pollster.ui.Screen;
 import com.minecraftcitiesnetwork.pollster.ui.ScreenContext;
 import com.minecraftcitiesnetwork.pollster.ui.Screens;
+import com.minecraftcitiesnetwork.pollster.ui.StaffText;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /** Name, description and what to expect, with Start. */
 public final class IntroScreen {
@@ -32,7 +34,7 @@ public final class IntroScreen {
                                          boolean preview) {
         Screen.Builder builder = Screen.builder(PlayerScreens.title(ui, survey, preview));
         if (!survey.description().isBlank()) {
-            builder.body(Component.text(survey.description(), NamedTextColor.WHITE));
+            builder.body(StaffText.render(survey.description()).colorIfAbsent(NamedTextColor.WHITE));
         }
         builder.body(ui.messages().messageFor(MessageKeys.SURVEY_INTRO_QUESTIONS,
                 MessageContainer.value("count", Integer.toString(survey.questions().size()))));
@@ -41,11 +43,11 @@ public final class IntroScreen {
         if (!survey.rewards().isEmpty()) {
             builder.body(ui.messages().messageFor(MessageKeys.SURVEY_INTRO_REWARDS));
         }
-        builder.button(Button.of(ui.style().primary("Start"), ctx -> start(ui, survey.id(), preview, ctx)));
+        builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_START)), ctx -> start(ui, survey.id(), preview, ctx)));
         if (featured) {
-            builder.button(Button.of(ui.style().secondary("Not now"), ScreenContext::close));
+            builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NOT_NOW)), ScreenContext::close));
         }
-        builder.button(Button.of(ui.style().secondary("Close"), ScreenContext::close));
+        builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_CLOSE)), ScreenContext::close));
         builder.columns(featured ? 3 : 2);
         return builder.build();
     }
@@ -93,7 +95,8 @@ public final class IntroScreen {
                 return;
             }
         }
-        SurveyFlow flow = new SurveyFlow(survey, player::hasPermission, ui.sessions().now(),
+        UUID playerId = player.getUniqueId();
+        SurveyFlow flow = new SurveyFlow(survey, node -> ui.hasPermission(playerId, node), ui.sessions().now(),
                 ui.settings().textMaxLength());
         PlayerSession session = ui.sessions().start(player.getUniqueId(), flow, preview);
         ui.sounds().open(player);

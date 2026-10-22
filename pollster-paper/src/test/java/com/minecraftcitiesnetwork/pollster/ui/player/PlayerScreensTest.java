@@ -26,6 +26,7 @@ import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.pl
 import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.single;
 import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.survey;
 import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.text;
+import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.yesNo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -138,6 +139,29 @@ class PlayerScreensTest {
         assertEquals("second-one", this.t.sessions.get(this.t.playerId).orElseThrow().flow().survey().id());
     }
 
+    @Test
+    void intro_permissionConditionsFollowThePlayerAfterRejoin() {
+        com.minecraftcitiesnetwork.pollster.api.model.Question gated =
+                new com.minecraftcitiesnetwork.pollster.api.model.Question("g",
+                        com.minecraftcitiesnetwork.pollster.api.model.QuestionType.TEXT, "Gated", List.of(),
+                        false, 0, 0, "permission(\"vip\")");
+        SurveyDefinition s = open("perm-one", single("a", 2, true), gated);
+        var ctx = this.t.context();
+        button(IntroScreen.create(this.t.ui, s, false), "Start").onClick().accept(ctx);
+        PlayerSession session = this.t.sessions.get(this.t.playerId).orElseThrow();
+        assertEquals(1, session.flow().visibleCount());
+
+        // After a rejoin the server hands out a new Player object, which is the one that counts.
+        org.bukkit.entity.Player rejoined = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        when(rejoined.hasPermission("vip")).thenReturn(true);
+        this.t.online.put(this.t.playerId, rejoined);
+        assertEquals(2, session.flow().visibleCount());
+
+        // Offline: no permissions at all.
+        this.t.online.remove(this.t.playerId);
+        assertEquals(1, session.flow().visibleCount());
+    }
+
     // --- question -----------------------------------------------------------------------
 
     @Test
@@ -233,6 +257,45 @@ class PlayerScreensTest {
         assertTrue(plain(QuestionScreen.create(this.t.ui, session, null).title()).contains("PREVIEW"));
     }
 
+    @Test
+    void question_doubleClickAnswersOnlyOnce() {
+        SurveyDefinition s = open("dbl-yes", yesNo("a"), yesNo("b"));
+        PlayerSession session = this.t.start(s, false);
+        var ctx = this.t.context();
+        var yes = button(QuestionScreen.create(this.t.ui, session, null), "Yes");
+        yes.onClick().accept(ctx);
+        yes.onClick().accept(ctx);
+        assertEquals(1, session.flow().answers().size());
+        assertEquals("b", session.flow().current().orElseThrow().key());
+        assertTrue(body(ctx.last()).contains("Question 2 of 2"));
+    }
+
+    @Test
+    void question_doubleClickBackStepsOnce() {
+        SurveyDefinition s = open("dbl-back", single("a", 2, true), single("b", 2, true), single("c", 2, true));
+        PlayerSession session = this.t.start(s, false);
+        session.flow().answer(new Answer.Choice("o0"));
+        session.flow().answer(new Answer.Choice("o0"));
+        var ctx = this.t.context();
+        var back = button(QuestionScreen.create(this.t.ui, session, null), "Back");
+        back.onClick().accept(ctx);
+        back.onClick().accept(ctx);
+        assertEquals("b", session.flow().current().orElseThrow().key());
+    }
+
+    @Test
+    void review_doubleClickBackStepsOnce() {
+        SurveyDefinition s = open("dbl-rev", single("a", 2, true), single("b", 2, true));
+        PlayerSession session = this.t.start(s, false);
+        session.flow().answer(new Answer.Choice("o0"));
+        session.flow().answer(new Answer.Choice("o0"));
+        var ctx = this.t.context();
+        var back = button(ReviewScreen.create(this.t.ui, session), "Back");
+        back.onClick().accept(ctx);
+        back.onClick().accept(ctx);
+        assertEquals("b", session.flow().current().orElseThrow().key());
+    }
+
     // --- review -------------------------------------------------------------------------
 
     @Test
@@ -246,16 +309,70 @@ class PlayerScreensTest {
     }
 
     @Test
-    void review_adminTextShownLiterally() {
+    void review_staffTextRendersRestrictedMiniMessage() {
         SurveyDefinition s = open("rev-two", new com.minecraftcitiesnetwork.pollster.api.model.Question("k",
                 com.minecraftcitiesnetwork.pollster.api.model.QuestionType.SINGLE, "Q <red>text",
                 List.of(new com.minecraftcitiesnetwork.pollster.api.model.Option("a", "<bold>Label")),
                 true, 0, 0, null));
         PlayerSession session = this.t.start(s, false);
         session.flow().answer(new Answer.Choice("a"));
-        String shown = body(ReviewScreen.create(this.t.ui, session));
-        assertTrue(shown.contains("Q <red>text"));
-        assertTrue(shown.contains("<bold>Label"));
+        Screen screen = ReviewScreen.create(this.t.ui, session);
+        String shown = body(screen);
+        // Question text and option labels are staff-written MiniMessage: colours and decorations apply.
+        assertTrue(shown.contains("Q text"), shown);
+        assertFalse(shown.contains("<red>"), shown);
+        assertTrue(shown.contains("Label"), shown);
+        assertFalse(shown.contains("<bold>"), shown);
+        assertTrue(screen.body().stream().anyMatch(c -> hasStyle(c,
+                n -> net.kyori.adventure.text.format.NamedTextColor.RED.equals(n.color()))));
+        assertTrue(screen.body().stream().anyMatch(c -> hasStyle(c,
+                n -> n.decoration(net.kyori.adventure.text.format.TextDecoration.BOLD)
+                        == net.kyori.adventure.text.format.TextDecoration.State.TRUE)));
+    }
+
+    @Test
+    void question_clickTagInStaffTextIsNotInteractive() {
+        String hostile = "<click:run_command:/op me><hover:show_text:'x'>Agree?";
+        SurveyDefinition s = open("click-one", new com.minecraftcitiesnetwork.pollster.api.model.Question("k",
+                com.minecraftcitiesnetwork.pollster.api.model.QuestionType.SINGLE, hostile,
+                List.of(new com.minecraftcitiesnetwork.pollster.api.model.Option("a", hostile),
+                        new com.minecraftcitiesnetwork.pollster.api.model.Option("b", "B")),
+                true, 0, 0, null));
+        PlayerSession session = this.t.start(s, false);
+        Screen screen = QuestionScreen.create(this.t.ui, session, null);
+        List<net.kyori.adventure.text.Component> shown = new java.util.ArrayList<>(screen.body());
+        screen.buttons().forEach(b -> shown.add(b.label()));
+        shown.add(screen.title());
+        for (net.kyori.adventure.text.Component c : shown) {
+            assertFalse(hasStyle(c, n -> n.clickEvent() != null || n.hoverEvent() != null), plain(c));
+        }
+        assertTrue(body(screen).contains("Agree?"));
+    }
+
+    @Test
+    void intro_staffNameAndDescriptionRenderWithoutClicks() {
+        SurveyDefinition s = this.t.add(new SurveyDefinition("name-one", "<green>Green <click:run_command:/op me>x",
+                "<italic>About", SurveyStatus.OPEN, true, false, false, List.of(),
+                List.of(single("q", 2, true))));
+        Screen screen = IntroScreen.create(this.t.ui, s, false);
+        assertTrue(plain(screen.title()).contains("Green"));
+        assertFalse(plain(screen.title()).contains("<green>"));
+        assertFalse(hasStyle(screen.title(), n -> n.clickEvent() != null));
+        assertTrue(body(screen).contains("About"));
+        assertFalse(body(screen).contains("<italic>"));
+    }
+
+    private static boolean hasStyle(net.kyori.adventure.text.Component component,
+                                    java.util.function.Predicate<net.kyori.adventure.text.Component> test) {
+        if (test.test(component)) {
+            return true;
+        }
+        for (net.kyori.adventure.text.Component child : component.children()) {
+            if (hasStyle(child, test)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // --- submit -------------------------------------------------------------------------
@@ -428,5 +545,44 @@ class PlayerScreensTest {
         assertTrue(ctx.closed);
         assertTrue(this.t.sessions.get(this.t.playerId).isEmpty());
         verify(this.t.service, never()).submit(any(), any(), anyString());
+    }
+
+    // --- configurable words ------------------------------------------------------------------
+
+    @Test
+    void words_comeFromMessages() {
+        String[][] overrides = {
+                {"survey.button.start", "Begin"}, {"survey.button.not-now", "Later"},
+                {"survey.button.close", "Shut"}, {"survey.button.answer-yes", "Ja"},
+                {"survey.button.answer-no", "Nein"}, {"survey.button.next", "Onward"},
+                {"survey.button.back", "Return"}, {"survey.button.skip", "Pass"},
+                {"survey.button.submit", "Send"}, {"survey.button.cancel", "Abort"},
+                {"survey.list-title", "Polls"}, {"survey.list-state.completed", " - Done"},
+                {"survey.list-state.in-progress", " - Going"}, {"survey.list-state.new", " - Fresh"},
+                {"survey.text-answer-label", "Type here"}};
+        for (String[] o : overrides) {
+            this.t.messages.setMessage(o[0], o[1]);
+        }
+        SurveyDefinition s = open("word-one", yesNo("a"), text("b", false), single("c", 2, false));
+        assertEquals(List.of("Begin", "Later", "Shut"), labels(IntroScreen.create(this.t.ui, s, true)));
+
+        PlayerSession session = this.t.start(s, false);
+        assertEquals(List.of("Ja", "Nein"), labels(QuestionScreen.create(this.t.ui, session, null)));
+        session.flow().answer(new Answer.Choice("yes"));
+        Screen textScreen = QuestionScreen.create(this.t.ui, session, null);
+        assertEquals(List.of("Onward", "Return", "Pass"), labels(textScreen));
+        assertEquals("Type here", plain(((Input.TextInput) textScreen.inputs().get(0)).label()));
+        session.flow().skip();
+        session.flow().skip();
+        assertEquals(List.of("Send", "Return", "Abort"), labels(ReviewScreen.create(this.t.ui, session)));
+        assertTrue(labels(ThanksScreen.create(this.t.ui, s)).contains("Shut"));
+
+        SurveyDefinition other = open("word-two", single("q", 2, true));
+        SurveyDefinition third = open("word-six", single("q", 2, true));
+        Screen list = SurveyListScreen.create(this.t.ui, this.t.player, List.of(s, other, third),
+                Set.of("word-one"), Set.of("word-two"));
+        assertEquals("Polls", plain(list.title()));
+        assertEquals(List.of("Survey word-one - Done", "Survey word-two - Going", "Survey word-six - Fresh", "Shut"),
+                labels(list));
     }
 }

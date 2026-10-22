@@ -94,4 +94,36 @@ class ReportScreenTest {
         assertEquals(8, first);
         assertEquals(4, last);
     }
+
+    private static List<String> answerLines(SurveyReport r) {
+        List<String> all = new ArrayList<>();
+        for (int page = 0; page < 3; page++) {
+            lines(TextAnswersScreen.create(DEPS, r, "why", page)).stream()
+                    .filter(l -> l.startsWith("• ")).forEach(all::add);
+        }
+        return all;
+    }
+
+    @Test
+    void report_anonymousTextAnswersAreShuffledStablyAcrossPages() {
+        SurveyReport r = report(true, 20, "a");
+        List<String> shown = answerLines(r);
+        List<String> submitted = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            submitted.add("• a" + i);
+        }
+        // Every answer once, but not in the order players submitted them (which could identify them).
+        assertEquals(new java.util.HashSet<>(submitted), new java.util.HashSet<>(shown));
+        assertEquals(20, shown.size());
+        assertFalse(submitted.equals(shown));
+        // Paging back and forth shows the same order, so no answer is skipped or repeated.
+        assertEquals(shown, answerLines(r));
+    }
+
+    @Test
+    void report_namedTextAnswersKeepSubmissionOrder() {
+        List<String> shown = answerLines(report(false, 20, "a"));
+        assertTrue(shown.get(0).startsWith("• a0 "), shown.get(0));
+        assertTrue(shown.get(19).startsWith("• a19 "), shown.get(19));
+    }
 }

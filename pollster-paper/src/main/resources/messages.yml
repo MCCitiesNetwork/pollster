@@ -29,6 +29,8 @@ ui:
 errors:
   # Any stale dialog button: the survey was closed, reloaded or deleted, or the session ended.
   survey-unavailable: '<prefix><red>This survey is no longer available.'
+  # A dialog button the player lacks the permission for.
+  no-permission: '<red>You do not have permission to do that.'
 
 report:
   player-only: '<prefix><red>Reports open as a dialog, so run this as a player. Use /pollster publish or /pollster export from the console.'
@@ -97,6 +99,24 @@ survey:
   cancelled: '<gray>Survey cancelled. Nothing was saved.'
   no-unfinished: '<prefix><gray>You have no unfinished survey.'
   saving: '<gray>Saving your answers...'
+  # Words on the player survey screens. Buttons are plain text; the dialog style colours them.
+  button:
+    start: 'Start'
+    not-now: 'Not now'
+    close: 'Close'
+    answer-yes: 'Yes'
+    answer-no: 'No'
+    next: 'Next'
+    back: 'Back'
+    skip: 'Skip'
+    submit: 'Submit'
+    cancel: 'Cancel'
+  list-title: 'Surveys'
+  list-state:
+    completed: '<gray> - Completed'
+    in-progress: '<yellow> - In progress'
+    new: '<green> - New'
+  text-answer-label: 'Your answer'
 
 reminder:
   message: "<prefix><yellow>You have an unfinished survey. <click:run_command:'/surveys resume'><hover:show_text:'<gray>Continue your survey'><green><underlined>Click to continue</underlined></green></hover></click>"
