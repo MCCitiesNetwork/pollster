@@ -105,4 +105,22 @@ class RewardRunnerTest {
         assertEquals("Steve", plain(c.getValue().subtitle()));
         assertTrue(this.logs.isEmpty());
     }
+
+    @Test
+    void run_titleWithNullSubtitleShowsEmptySubtitle() {
+        this.runner.run(this.player, survey("Town", new Reward.TitleReward("Thanks", null)));
+        ArgumentCaptor<Title> c = ArgumentCaptor.forClass(Title.class);
+        verify(this.player).showTitle(c.capture());
+        assertEquals("Thanks", plain(c.getValue().title()));
+        assertEquals("", plain(c.getValue().subtitle()));
+        assertTrue(this.logs.isEmpty());
+    }
+
+    @Test
+    void run_titleWithBlankSubtitleShowsEmptySubtitle() {
+        this.runner.run(this.player, survey("Town", new Reward.TitleReward("Thanks", "  ")));
+        ArgumentCaptor<Title> c = ArgumentCaptor.forClass(Title.class);
+        verify(this.player).showTitle(c.capture());
+        assertEquals("", plain(c.getValue().subtitle()));
+    }
 }
