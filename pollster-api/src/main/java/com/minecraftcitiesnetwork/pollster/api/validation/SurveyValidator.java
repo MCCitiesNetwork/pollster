@@ -29,6 +29,11 @@ public final class SurveyValidator {
 
     public static List<ValidationProblem> validate(SurveyDefinition survey) {
         List<ValidationProblem> problems = new ArrayList<>();
+        // Missing fields come first and stop the run: every later check would dereference them.
+        checkRequiredFields(survey, problems);
+        if (!problems.isEmpty()) {
+            return problems;
+        }
         if (!SurveyIds.isValidSlug(survey.id())) {
             problems.add(new ValidationProblem(null,
                     "Survey id must be 3 to 48 characters of a-z, 0-9 and '-': \"" + survey.id() + "\"."));
@@ -53,6 +58,30 @@ public final class SurveyValidator {
             validateCondition(survey, index, problems);
         }
         return problems;
+    }
+
+    private static void checkRequiredFields(SurveyDefinition survey, List<ValidationProblem> problems) {
+        if (survey.name() == null || survey.name().isBlank()) {
+            problems.add(new ValidationProblem(null, "Survey name is required."));
+        }
+        if (survey.rewards() == null) {
+            problems.add(new ValidationProblem(null, "Survey rewards list is required (it may be empty)."));
+        }
+        if (survey.questions() == null) {
+            problems.add(new ValidationProblem(null, "Survey questions list is required."));
+            return;
+        }
+        for (Question question : survey.questions()) {
+            String key = question.key();
+            if (question.text() == null || question.text().isBlank()) {
+                problems.add(new ValidationProblem(key, "Question text is required."));
+            }
+            if (question.type() == null) {
+                problems.add(new ValidationProblem(key, "Question type is required."));
+            } else if (question.options() == null) {
+                problems.add(new ValidationProblem(key, "Question options list is required."));
+            }
+        }
     }
 
     private static void validateCondition(SurveyDefinition survey, int index, List<ValidationProblem> problems) {

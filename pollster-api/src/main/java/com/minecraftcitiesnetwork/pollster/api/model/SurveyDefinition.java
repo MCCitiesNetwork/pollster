@@ -15,8 +15,9 @@ public record SurveyDefinition(
         List<Question> questions) {
 
     public SurveyDefinition {
-        rewards = List.copyOf(rewards);
-        questions = List.copyOf(questions);
+        // Null lists survive construction so SurveyValidator can report them instead of the record throwing.
+        rewards = rewards == null ? null : List.copyOf(rewards);
+        questions = questions == null ? null : List.copyOf(questions);
     }
 
     public SurveyDefinition withStatus(SurveyStatus status) {
