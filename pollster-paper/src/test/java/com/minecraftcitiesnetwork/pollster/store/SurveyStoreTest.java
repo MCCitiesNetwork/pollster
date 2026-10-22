@@ -168,4 +168,33 @@ class SurveyStoreTest {
             assertEquals(count + 1, files.count());
         }
     }
+
+    @Test
+    void loadAll_logsOneLinePerBrokenFile() throws Exception {
+        for (String name : List.of("good.yml", "bad-yaml.yml", "unknown-type.yml", "dup-keys.yml")) {
+            Files.copy(fixture(name), this.dir.resolve(name));
+        }
+        Logger log = Logger.getLogger("pollster-store-test-" + System.nanoTime());
+        log.setUseParentHandlers(false);
+        List<java.util.logging.LogRecord> records = new java.util.ArrayList<>();
+        log.addHandler(new java.util.logging.Handler() {
+            @Override public void publish(java.util.logging.LogRecord record) { records.add(record); }
+            @Override public void flush() { }
+            @Override public void close() { }
+        });
+        new SurveyStore(this.dir, log).loadAll();
+
+        assertEquals(3, records.size(), records.stream().map(java.util.logging.LogRecord::getMessage).toList()
+                .toString());
+        for (String name : List.of("bad-yaml.yml", "unknown-type.yml", "dup-keys.yml")) {
+            List<String> lines = records.stream().map(java.util.logging.LogRecord::getMessage)
+                    .filter(m -> m.contains(name)).toList();
+            assertEquals(1, lines.size(), name);
+            String line = lines.get(0);
+            assertTrue(line.startsWith("Skipping survey file " + name + ": "), line);
+            assertFalse(line.contains("\n") || line.contains("\r"), "one line only: " + line);
+            assertEquals(java.util.logging.Level.WARNING, records.stream()
+                    .filter(r -> r.getMessage().contains(name)).findFirst().orElseThrow().getLevel());
+        }
+    }
 }
