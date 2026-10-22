@@ -44,14 +44,24 @@ public interface SurveyService {
     /** OPEN surveys with lock OK that the player may see (permission-gated ones need pollster.survey.&lt;id&gt;). */
     @NotNull List<SurveyDefinition> visibleTo(@NotNull Player player);
 
-    /** Validates, writes status OPEN to the file and stores the content hash. Fails with IllegalStateException when invalid. */
+    /**
+     * Validates, writes status OPEN to the file and stores the content hash. Fails with
+     * IllegalStateException when invalid or not a DRAFT.
+     */
     @NotNull CompletableFuture<OpenResult> open(@NotNull String surveyId);
 
+    /** OPEN to CLOSED. Fails with IllegalStateException when the survey is not OPEN. */
     @NotNull CompletableFuture<Void> close(@NotNull String surveyId);
 
+    /** CLOSED to OPEN. Fails with IllegalStateException when the survey is not CLOSED. */
     @NotNull CompletableFuture<Void> reopen(@NotNull String surveyId);
 
-    /** Saves a survey definition (editor changes). Fails with IllegalArgumentException listing validation problems. */
+    /**
+     * Saves a survey definition (editor changes). Fails with IllegalArgumentException listing
+     * validation problems, and with IllegalStateException when the save would break the
+     * lifecycle: a status change (new surveys start as DRAFT), a content change (questions or
+     * anonymity) on an OPEN survey, or any change to a CLOSED survey.
+     */
     @NotNull CompletableFuture<Void> save(@NotNull SurveyDefinition survey);
 
     /** Copies any survey into a new DRAFT under {@code newId}, with no database state. */

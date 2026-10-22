@@ -54,6 +54,22 @@ class SurveyServiceTest {
         @Override public void execute(Runnable command) { command.run(); }
     }
 
+    /** Holds database work until the test runs it, to interleave a write with another. */
+    private static final class QueuedExecutorService extends AbstractExecutorService {
+        final java.util.ArrayDeque<Runnable> queue = new java.util.ArrayDeque<>();
+        @Override public void shutdown() { }
+        @Override public List<Runnable> shutdownNow() { return List.of(); }
+        @Override public boolean isShutdown() { return false; }
+        @Override public boolean isTerminated() { return false; }
+        @Override public boolean awaitTermination(long timeout, TimeUnit unit) { return true; }
+        @Override public void execute(Runnable command) { this.queue.add(command); }
+        void runAll() {
+            while (!this.queue.isEmpty()) {
+                this.queue.poll().run();
+            }
+        }
+    }
+
     @TempDir
     Path dir;
 
@@ -180,5 +196,119 @@ class SurveyServiceTest {
         CompletionException ex = assertThrows(CompletionException.class,
                 () -> this.service.duplicate("poll-one", "poll-two").join());
         assertInstanceOf(IllegalArgumentException.class, ex.getCause());
+    }
+
+    // ---- lifecycle enforcement ---------------------------------------------------------------
+
+    private static SurveyDefinition with(SurveyDefinition s, boolean anonymous, boolean featured) {
+        return new SurveyDefinition(s.id(), s.name(), s.description(), s.status(), anonymous, featured,
+                s.requiresPermission(), s.rewards(), s.questions());
+    }
+
+    private static SurveyDefinition otherQuestions(SurveyDefinition s) {
+        return s.withQuestions(List.of(new Question("pick", QuestionType.SINGLE, "Pick again",
+                List.of(new Option("a", "A"), new Option("b", "B")), true, 0, 0, null)));
+    }
+
+    private static Throwable failure(Runnable call) {
+        CompletionException ex = assertThrows(CompletionException.class, call::run);
+        return ex.getCause();
+    }
+
+    @Test
+    void save_rejectsStatusChange() throws Exception {
+        SurveyDefinition draft = saved("poll-one", SurveyStatus.DRAFT);
+        Throwable cause = failure(() -> this.service.save(draft.withStatus(SurveyStatus.OPEN)).join());
+        assertInstanceOf(IllegalStateException.class, cause);
+        assertTrue(cause.getMessage().contains("open, close and reopen"), cause.getMessage());
+        assertEquals(SurveyStatus.DRAFT, this.store.get("poll-one").orElseThrow().status());
+    }
+
+    @Test
+    void save_newSurveyMustBeDraft() {
+        Throwable cause = failure(() -> this.service.save(survey("poll-new", SurveyStatus.OPEN)).join());
+        assertInstanceOf(IllegalStateException.class, cause);
+        assertFalse(this.store.exists("poll-new"));
+        this.service.save(survey("poll-new", SurveyStatus.DRAFT)).join();
+        assertTrue(this.store.exists("poll-new"));
+    }
+
+    @Test
+    void save_draftAcceptsAnyContentChange() throws Exception {
+        SurveyDefinition draft = saved("poll-one", SurveyStatus.DRAFT);
+        this.service.save(with(otherQuestions(draft), true, true)).join();
+        assertEquals("Pick again", this.store.get("poll-one").orElseThrow().questions().get(0).text());
+    }
+
+    @Test
+    void save_openRejectsContentAndAnonymousChanges() throws Exception {
+        SurveyDefinition open = saved("poll-one", SurveyStatus.OPEN);
+        assertInstanceOf(IllegalStateException.class,
+                failure(() -> this.service.save(otherQuestions(open)).join()));
+        assertInstanceOf(IllegalStateException.class,
+                failure(() -> this.service.save(with(open, true, false)).join()));
+        assertEquals(open, this.store.get("poll-one").orElseThrow());
+        // Featured is not content, so it may still change while the survey is open.
+        this.service.save(with(open, false, true)).join();
+        assertTrue(this.store.get("poll-one").orElseThrow().featured());
+    }
+
+    @Test
+    void save_closedRejectsAnyChange() throws Exception {
+        SurveyDefinition closed = saved("poll-one", SurveyStatus.CLOSED);
+        Throwable cause = failure(() -> this.service.save(with(closed, false, true)).join());
+        assertInstanceOf(IllegalStateException.class, cause);
+        assertTrue(cause.getMessage().contains("closed"), cause.getMessage());
+        assertEquals(closed, this.store.get("poll-one").orElseThrow());
+        this.service.save(closed).join();
+    }
+
+    @Test
+    void save_staleOpenSnapshotCannotUndoClose() throws Exception {
+        SurveyDefinition open = saved("poll-one", SurveyStatus.OPEN);
+        this.service.close("poll-one").join();
+        // An editor that read the survey before the close toggles Featured afterwards.
+        assertInstanceOf(IllegalStateException.class,
+                failure(() -> this.service.save(with(open, false, true)).join()));
+        assertEquals(SurveyStatus.CLOSED, this.store.get("poll-one").orElseThrow().status());
+    }
+
+    @Test
+    void close_writesCurrentDefinitionNotSnapshot() throws Exception {
+        QueuedExecutorService queued = new QueuedExecutorService();
+        DefaultSurveyService deferred = new DefaultSurveyService(this.store, this.backend,
+                new ExecutorState(Runnable::run, queued, queued), Logger.getAnonymousLogger());
+        SurveyDefinition open = saved("poll-one", SurveyStatus.OPEN);
+        var closing = deferred.close("poll-one");
+        // A Featured toggle lands between the close being asked for and its write.
+        this.store.save(with(open, false, true));
+        queued.runAll();
+        closing.join();
+        SurveyDefinition result = this.store.get("poll-one").orElseThrow();
+        assertEquals(SurveyStatus.CLOSED, result.status());
+        assertTrue(result.featured(), "the close must not write back the pre-toggle snapshot");
+    }
+
+    @Test
+    void open_requiresDraft() throws Exception {
+        saved("poll-one", SurveyStatus.CLOSED);
+        assertInstanceOf(IllegalStateException.class, failure(() -> this.service.open("poll-one").join()));
+        verify(this.backend, never()).open(any(), any(), any());
+        assertEquals(SurveyStatus.CLOSED, this.store.get("poll-one").orElseThrow().status());
+    }
+
+    @Test
+    void close_requiresOpen() throws Exception {
+        saved("poll-one", SurveyStatus.DRAFT);
+        assertInstanceOf(IllegalStateException.class, failure(() -> this.service.close("poll-one").join()));
+        verify(this.backend, never()).close(any(), any());
+    }
+
+    @Test
+    void reopen_requiresClosed() throws Exception {
+        saved("poll-one", SurveyStatus.DRAFT);
+        assertInstanceOf(IllegalStateException.class, failure(() -> this.service.reopen("poll-one").join()));
+        verify(this.backend, never()).reopen(any());
+        assertEquals(SurveyStatus.DRAFT, this.store.get("poll-one").orElseThrow().status());
     }
 }
