@@ -27,10 +27,13 @@ public interface SurveyService {
     /** Result of comparing a survey file's content hash with the hash stored when it was opened. */
     enum SurveyLock { OK, CONTENT_CHANGED, NOT_OPENED }
 
-    /** Re-reads database state for every OPEN or CLOSED survey and recomputes each lock. */
+    /**
+     * Re-reads database state for every survey and recomputes each lock. A survey with a state
+     * row is checked whatever its file status says; one without is NOT_OPENED.
+     */
     @NotNull CompletableFuture<Map<String, SurveyLock>> refreshLocks();
 
-    /** The cached lock from the last {@link #refreshLocks()}; {@code NOT_OPENED} for drafts. */
+    /** The cached lock from the last {@link #refreshLocks()}; {@code NOT_OPENED} without a state row. */
     @NotNull SurveyLock lock(@NotNull String surveyId);
 
     /** Database state cached by the last refresh, kept current by open/close/reopen. */
@@ -77,6 +80,7 @@ public interface SurveyService {
 
     @NotNull CompletableFuture<Map<String, Integer>> responseCounts();
 
+    /** The report. When the lock is not OK, the report's survey is anonymous whatever the file says. */
     @NotNull CompletableFuture<SurveyReport> report(@NotNull String surveyId);
 
     @NotNull CompletableFuture<Optional<java.time.Instant>> lastFeatured(@NotNull UUID player);

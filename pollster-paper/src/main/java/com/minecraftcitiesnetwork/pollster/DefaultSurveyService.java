@@ -86,10 +86,9 @@ public final class DefaultSurveyService implements SurveyService {
 
     private Map<String, SurveyStateRecord> loadStates() {
         Map<String, SurveyStateRecord> loaded = new HashMap<>();
+        // Drafts too: a file hand-edited back to DRAFT keeps its state row, and a state row means
+        // the survey has been opened, so its lock must still be checked.
         for (SurveyDefinition survey : this.store.all()) {
-            if (survey.status() == SurveyStatus.DRAFT) {
-                continue;
-            }
             this.backend.state(survey.id()).ifPresent(state -> loaded.put(survey.id(), state));
         }
         return loaded;
@@ -111,9 +110,6 @@ public final class DefaultSurveyService implements SurveyService {
     }
 
     private SurveyLock computeLock(SurveyDefinition survey) {
-        if (survey.status() == SurveyStatus.DRAFT) {
-            return SurveyLock.NOT_OPENED;
-        }
         SurveyStateRecord state = this.states.get(survey.id());
         if (state == null) {
             return SurveyLock.NOT_OPENED;
@@ -384,7 +380,15 @@ public final class DefaultSurveyService implements SurveyService {
         if (found.isEmpty()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("No survey '" + surveyId + "'."));
         }
-        return onDatabase(() -> ReportBuilder.build(found.get(), this.backend.reportData(surveyId)));
+        SurveyDefinition survey = found.get();
+        if (lock(surveyId) != SurveyLock.OK && !survey.anonymous()) {
+            // The file no longer matches what players answered under (anonymous: true -> false
+            // by hand, for example), so its anonymous flag cannot be trusted: hide names.
+            survey = new SurveyDefinition(survey.id(), survey.name(), survey.description(), survey.status(),
+                    true, survey.featured(), survey.requiresPermission(), survey.rewards(), survey.questions());
+        }
+        SurveyDefinition reported = survey;
+        return onDatabase(() -> ReportBuilder.build(reported, this.backend.reportData(surveyId)));
     }
 
     @Override

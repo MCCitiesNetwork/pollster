@@ -311,4 +311,43 @@ class SurveyServiceTest {
         verify(this.backend, never()).reopen(any());
         assertEquals(SurveyStatus.DRAFT, this.store.get("poll-one").orElseThrow().status());
     }
+
+    // ---- anonymity after a hand edit -------------------------------------------------------
+
+    @Test
+    void refreshLocks_draftWithStateRowIsChecked() throws Exception {
+        // A file hand-edited back to DRAFT after it was opened still has its state row.
+        saved("poll-one", SurveyStatus.DRAFT);
+        when(this.backend.state("poll-one")).thenReturn(Optional.of(
+                new SurveyStateRecord("poll-one", "stale-hash", Instant.now(), null)));
+        this.service.refreshLocks().join();
+        assertEquals(SurveyLock.CONTENT_CHANGED, this.service.lock("poll-one"));
+    }
+
+    @Test
+    void report_forcesAnonymousWhenLockNotOk() throws Exception {
+        // Opened anonymous, then hand-edited to anonymous: false.
+        SurveyDefinition named = saved("poll-one", SurveyStatus.OPEN);
+        SurveyDefinition promised = with(named, true, false);
+        when(this.backend.state("poll-one")).thenReturn(Optional.of(
+                new SurveyStateRecord("poll-one", ContentHash.of(promised), Instant.now(), null)));
+        when(this.backend.reportData("poll-one")).thenReturn(
+                new com.minecraftcitiesnetwork.pollster.api.report.ReportData(0, java.util.OptionalDouble.empty(),
+                        java.util.Map.of()));
+        this.service.refreshLocks().join();
+        assertEquals(SurveyLock.CONTENT_CHANGED, this.service.lock("poll-one"));
+        assertTrue(this.service.report("poll-one").join().survey().anonymous());
+    }
+
+    @Test
+    void report_keepsNamesWhenLockOk() throws Exception {
+        SurveyDefinition named = saved("poll-one", SurveyStatus.OPEN);
+        when(this.backend.state("poll-one")).thenReturn(Optional.of(
+                new SurveyStateRecord("poll-one", ContentHash.of(named), Instant.now(), null)));
+        when(this.backend.reportData("poll-one")).thenReturn(
+                new com.minecraftcitiesnetwork.pollster.api.report.ReportData(0, java.util.OptionalDouble.empty(),
+                        java.util.Map.of()));
+        this.service.refreshLocks().join();
+        assertFalse(this.service.report("poll-one").join().survey().anonymous());
+    }
 }
