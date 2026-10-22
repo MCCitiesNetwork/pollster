@@ -80,20 +80,23 @@ public final class HubScreen {
             b.body(Component.text(t(ui, EDITOR_HUB_LOCKED_WARNING), NamedTextColor.RED));
         }
 
-        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_NAME), s.name()), ctx -> editName(ui, ctx, id)));
-        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_DESCRIPTION), s.description()),
+        // A closed survey cannot change at all, and anonymity only changes in a draft. Those fields
+        // stay clickable (they explain why, or open read-only) but are drawn gray so they do not look active.
+        boolean editable = s.status() != SurveyStatus.CLOSED;
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_NAME), s.name(), editable), ctx -> editName(ui, ctx, id)));
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_DESCRIPTION), s.description(), editable),
                 ctx -> editDescription(ui, ctx, id)));
-        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_QUESTIONS), "(" + s.questions().size() + ")"),
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_QUESTIONS), "(" + s.questions().size() + ")", editable),
                 ctx -> current(ui, ctx, id, fresh -> ctx.open(QuestionListScreen.create(ui, fresh)))));
-        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_REWARDS), "(" + s.rewards().size() + ")"),
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_REWARDS), "(" + s.rewards().size() + ")", editable),
                 ctx -> current(ui, ctx, id, fresh -> ctx.open(RewardsScreen.create(ui, fresh)))));
-        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_ANONYMOUS), yesNo(ui, s.anonymous())), ctx -> toggle(ui, ctx, id,
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_ANONYMOUS), yesNo(ui, s.anonymous()), draft), ctx -> toggle(ui, ctx, id,
                 true, fresh -> copy(fresh, fresh.name(), fresh.description(), !fresh.anonymous(),
                         fresh.featured(), fresh.requiresPermission()))));
-        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_FEATURED), yesNo(ui, s.featured())), ctx -> toggle(ui, ctx, id,
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_FEATURED), yesNo(ui, s.featured()), editable), ctx -> toggle(ui, ctx, id,
                 false, fresh -> copy(fresh, fresh.name(), fresh.description(), fresh.anonymous(),
                         !fresh.featured(), fresh.requiresPermission()))));
-        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_REQUIRES_PERMISSION), yesNo(ui, s.requiresPermission())),
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_REQUIRES_PERMISSION), yesNo(ui, s.requiresPermission()), editable),
                 ctx -> toggle(ui, ctx, id, false, fresh -> copy(fresh, fresh.name(), fresh.description(),
                         fresh.anonymous(), fresh.featured(), !fresh.requiresPermission()))));
         b.button(Button.of(ui.style().edit(t(ui, EDITOR_HUB_PREVIEW)), ctx -> preview(ui, ctx, id)));
@@ -196,7 +199,7 @@ public final class HubScreen {
                         return;
                     }
                     save(ui, ctx, id, apply.apply(value), problem -> ctx.open(textEdit(ui, id, field, value,
-                            multiline, max, ui.style().error(reason(problem)), required, apply)));
+                            multiline, max, AdminSupport.reason(ui, problem), required, apply)));
                 }))
                 .button(Button.of(ui.style().secondary(ui.style().word(UI_BUTTON_CANCEL)), ctx -> open(ui, ctx, id)))
                 .columns(2)
@@ -321,11 +324,6 @@ public final class HubScreen {
     }
 
     // --- helpers ---------------------------------------------------------------------------
-
-    static String reason(Throwable error) {
-        Throwable t = AdminSupport.unwrap(error);
-        return t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage();
-    }
 
     private static SurveyDefinition copy(SurveyDefinition s, String name, String description, boolean anonymous,
                                          boolean featured, boolean requiresPermission) {

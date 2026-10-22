@@ -1,6 +1,7 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
 import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
+import com.minecraftcitiesnetwork.pollster.SurveyLifecycleException;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import com.minecraftcitiesnetwork.pollster.ui.Button;
@@ -59,7 +60,14 @@ final class AdminSupport {
 
     /** A yellow button label with its current value after it in gray, as the manager hubs do. */
     static @NotNull Component valued(@NotNull AdminUi ui, @NotNull String name, @NotNull String value) {
-        return ui.style().edit(name).append(Component.text(" " + truncate(value, 32), NamedTextColor.GRAY));
+        return valued(ui, name, value, true);
+    }
+
+    /** As above; an inactive field (locked by the survey's status) uses the gray secondary style. */
+    static @NotNull Component valued(@NotNull AdminUi ui, @NotNull String name, @NotNull String value,
+                                     boolean active) {
+        Component label = active ? ui.style().edit(name) : ui.style().secondary(name);
+        return label.append(Component.text(" " + truncate(value, 32), NamedTextColor.GRAY));
     }
 
     static @NotNull Screen loading(@NotNull AdminUi ui) {
@@ -77,15 +85,34 @@ final class AdminSupport {
         return notice(ui, t(ui, EDITOR_COMMON_SURVEY), ui.messages().messageFor(MessageKeys.SURVEY_UNAVAILABLE), onOk);
     }
 
-    /** An error screen whose details are the validator problems joined by "; " in an exception message. */
+    /**
+     * An error screen. A lifecycle refusal shows its messages.yml text; anything else shows the
+     * validator problems joined by "; " in the exception message.
+     */
     static @NotNull Screen failure(@NotNull AdminUi ui, @NotNull Throwable cause, @NotNull Consumer<ScreenContext> onOk) {
         Throwable t = unwrap(cause);
-        String reason = t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage();
         List<Component> details = new ArrayList<>();
-        for (String part : reason.split("; ")) {
-            details.add(Component.text(part));
+        if (t instanceof SurveyLifecycleException lifecycle) {
+            details.add(ui.messages().messageFor(lifecycle.messageKey()));
+        } else {
+            for (String part : message(t).split("; ")) {
+                details.add(Component.text(part));
+            }
         }
         return Screens.error(ui.style(), ui.style().error(t(ui, EDITOR_COMMON_COULD_NOT_SAVE)), details, onOk);
+    }
+
+    /** One line for a refused save, shown above an input: the messages.yml text for lifecycle refusals. */
+    static @NotNull Component reason(@NotNull AdminUi ui, @NotNull Throwable error) {
+        Throwable t = unwrap(error);
+        if (t instanceof SurveyLifecycleException lifecycle) {
+            return ui.messages().messageFor(lifecycle.messageKey());
+        }
+        return ui.style().error(message(t));
+    }
+
+    private static String message(Throwable t) {
+        return t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage();
     }
 
     /** The problems that stop a survey from being opened or previewed, as readable lines. */

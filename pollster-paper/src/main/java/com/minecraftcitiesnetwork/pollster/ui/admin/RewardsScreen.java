@@ -86,7 +86,7 @@ public final class RewardsScreen {
                         List<Reward> rewards = new ArrayList<>(current.rewards());
                         rewards.add(reward);
                         return current.withRewards(rewards);
-                    }, failure -> ctx.open(add(ui, s, ui.style().error(HubScreen.reason(failure)))));
+                    }, failure -> ctx.open(add(ui, s, AdminSupport.reason(ui, failure))));
                 }))
                 .button(Button.of(ui.style().secondary(ui.style().word(UI_BUTTON_CANCEL)), ctx -> ctx.open(create(ui, s))))
                 .columns(2)

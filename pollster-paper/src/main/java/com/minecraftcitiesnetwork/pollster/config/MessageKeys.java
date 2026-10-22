@@ -82,6 +82,7 @@ public final class MessageKeys {
     public static final String EDITOR_OPEN_WARNING = "editor.open-warning";
     public static final String EDITOR_LOCKED = "editor.locked";
     public static final String EDITOR_READ_ONLY = "editor.read-only";
+    public static final String EDITOR_STATUS_CHANGED = "editor.status-changed";
     public static final String EDITOR_ANONYMOUS_LOCKED = "editor.anonymous-locked";
     public static final String EDITOR_MOVE_BREAKS_CONDITION = "editor.move-breaks-condition";
     public static final String EDITOR_KEY_REFERENCED = "editor.key-referenced";

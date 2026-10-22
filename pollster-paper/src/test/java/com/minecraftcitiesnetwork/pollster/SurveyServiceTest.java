@@ -435,4 +435,30 @@ class SurveyServiceTest {
             main.shutdownNow();
         }
     }
+
+    // ---- lifecycle rejections carry a reason the dialogs can translate ------------------------
+
+    private static SurveyLifecycleException.Reason reasonOf(Runnable call) {
+        Throwable cause = failure(call);
+        assertInstanceOf(SurveyLifecycleException.class, cause);
+        return ((SurveyLifecycleException) cause).reason();
+    }
+
+    @Test
+    void lifecycle_rejectionsCarryReasons() throws Exception {
+        SurveyDefinition closed = saved("poll-closed", SurveyStatus.CLOSED);
+        assertEquals(SurveyLifecycleException.Reason.CLOSED,
+                reasonOf(() -> this.service.save(with(closed, false, true)).join()));
+        SurveyDefinition open = saved("poll-open", SurveyStatus.OPEN);
+        assertEquals(SurveyLifecycleException.Reason.CONTENT_LOCKED,
+                reasonOf(() -> this.service.save(otherQuestions(open)).join()));
+        assertEquals(SurveyLifecycleException.Reason.STATUS_CHANGED,
+                reasonOf(() -> this.service.save(open.withStatus(SurveyStatus.CLOSED)).join()));
+        assertEquals(SurveyLifecycleException.Reason.STATUS_CHANGED,
+                reasonOf(() -> this.service.reopen("poll-open").join()));
+        assertEquals(SurveyLifecycleException.Reason.STATUS_CHANGED,
+                reasonOf(() -> this.service.close("poll-closed").join()));
+        assertEquals(SurveyLifecycleException.Reason.STATUS_CHANGED,
+                reasonOf(() -> this.service.open("poll-open").join()));
+    }
 }

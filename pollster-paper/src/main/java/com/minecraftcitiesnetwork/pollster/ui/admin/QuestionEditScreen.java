@@ -210,7 +210,7 @@ public final class QuestionEditScreen {
                 ctx.open(AdminSupport.loading(ui));
                 ui.service().save(ok.s()).whenComplete((ignored, error) -> {
                     if (error != null) {
-                        onError.accept(ui.style().error(HubScreen.reason(error)));
+                        onError.accept(AdminSupport.reason(ui, error));
                         return;
                     }
                     onSaved.accept(ui.service().survey(ok.s().id()).orElse(ok.s()));

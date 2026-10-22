@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
+import com.minecraftcitiesnetwork.pollster.SurveyLifecycleException;
 import com.minecraftcitiesnetwork.pollster.SurveyService;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyDefinition;
 import com.minecraftcitiesnetwork.pollster.api.model.SurveyStatus;
@@ -198,5 +199,53 @@ class HubScreenTest {
         button(s, "Report").onClick().accept(ctx);
         assertTrue(f.reports.isEmpty());
         assertTrue(plain(ctx.last()).contains("You may not see reports."), plain(ctx.last()));
+    }
+
+    @Test
+    void hub_lifecycleFailureShowsMessageNotException() {
+        AdminFixture f = new AdminFixture(this.dir);
+        f.messages.setMessage("editor.status-changed", "Status moved on.");
+        org.mockito.Mockito.doReturn(java.util.concurrent.CompletableFuture
+                .failedFuture(new java.util.concurrent.CompletionException(new SurveyLifecycleException(
+                        SurveyLifecycleException.Reason.STATUS_CHANGED, "Survey 'poll-open' is closed, not open."))))
+                .when(f.service).close("poll-open");
+        AdminFixture.FakeContext ctx = f.context();
+        button(hub(f, valid(f, "poll-open", SurveyStatus.OPEN), 0), "Close survey").onClick().accept(ctx);
+        String shown = plain(ctx.last());
+        assertTrue(shown.contains("Status moved on."), shown);
+        assertFalse(shown.contains("not open"), shown);
+    }
+
+    @Test
+    void hub_lifecycleFailureOnTextEditShowsMessage() {
+        AdminFixture f = new AdminFixture(this.dir);
+        org.mockito.Mockito.doReturn(java.util.concurrent.CompletableFuture.failedFuture(new SurveyLifecycleException(
+                        SurveyLifecycleException.Reason.CLOSED, "cannot change status by saving")))
+                .when(f.service).save(org.mockito.ArgumentMatchers.any());
+        AdminFixture.FakeContext ctx = f.context();
+        button(hub(f, valid(f, "poll-one", SurveyStatus.OPEN), 0), "Name").onClick().accept(ctx);
+        ctx.text("value", "New name");
+        button(ctx.last(), "Save").onClick().accept(ctx);
+        String shown = plain(ctx.last());
+        assertTrue(shown.contains("Read only."), shown);
+        assertFalse(shown.contains("cannot change status"), shown);
+    }
+
+    private static String markup(net.kyori.adventure.text.Component c) {
+        return net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().serialize(c);
+    }
+
+    @Test
+    void hub_closedEditButtonsLookInactive() {
+        AdminFixture f = new AdminFixture(this.dir);
+        Screen closed = hub(f, valid(f, "poll-closed", SurveyStatus.CLOSED), 0);
+        for (String field : List.of("Name", "Description", "Questions", "Rewards", "Anonymous", "Featured",
+                "Requires permission")) {
+            String label = markup(button(closed, field).label());
+            assertFalse(label.contains("yellow"), field + ": " + label);
+            assertTrue(label.startsWith("<gray>"), field + ": " + label);
+        }
+        Screen draft = hub(f, valid(f, "poll-draft", SurveyStatus.DRAFT), 0);
+        assertTrue(markup(button(draft, "Name").label()).contains("yellow"));
     }
 }

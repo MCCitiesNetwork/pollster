@@ -11,6 +11,7 @@ import com.minecraftcitiesnetwork.pollster.api.result.OpenResult;
 import com.minecraftcitiesnetwork.pollster.api.result.SubmitResult;
 import com.minecraftcitiesnetwork.pollster.api.validation.SurveyValidator;
 import com.minecraftcitiesnetwork.pollster.api.validation.ValidationProblem;
+import com.minecraftcitiesnetwork.pollster.SurveyLifecycleException.Reason;
 import com.minecraftcitiesnetwork.pollster.backend.AnswerRowInput;
 import com.minecraftcitiesnetwork.pollster.backend.PollsterBackend;
 import com.minecraftcitiesnetwork.pollster.backend.ResponseSubmission;
@@ -188,7 +189,7 @@ public final class DefaultSurveyService implements SurveyService {
 
     private static void checkOpenable(SurveyDefinition survey) {
         if (survey.status() != SurveyStatus.DRAFT) {
-            throw new IllegalStateException("Survey '" + survey.id() + "' is "
+            throw new SurveyLifecycleException(Reason.STATUS_CHANGED, "Survey '" + survey.id() + "' is "
                     + survey.status().name().toLowerCase(Locale.ROOT) + "; only a draft can be opened.");
         }
         List<ValidationProblem> problems = SurveyValidator.validate(survey);
@@ -222,7 +223,7 @@ public final class DefaultSurveyService implements SurveyService {
             // save that landed in between is kept rather than overwritten by an older snapshot.
             SurveyDefinition current = current(surveyId);
             if (current.status() != from) {
-                throw new IllegalStateException("Survey '" + surveyId + "' is "
+                throw new SurveyLifecycleException(Reason.STATUS_CHANGED, "Survey '" + surveyId + "' is "
                         + current.status().name().toLowerCase(Locale.ROOT) + ", not "
                         + from.name().toLowerCase(Locale.ROOT) + ".");
             }
@@ -263,7 +264,7 @@ public final class DefaultSurveyService implements SurveyService {
             return;
         }
         if (updated.status() != current.status()) {
-            throw new IllegalStateException("Survey '" + id + "' cannot change status by saving; status changes "
+            throw new SurveyLifecycleException(Reason.STATUS_CHANGED, "Survey '" + id + "' cannot change status by saving; status changes "
                     + "only through open, close and reopen.");
         }
         switch (current.status()) {
@@ -271,13 +272,13 @@ public final class DefaultSurveyService implements SurveyService {
             }
             case OPEN -> {
                 if (!ContentHash.of(updated).equals(ContentHash.of(current))) {
-                    throw new IllegalStateException("Survey '" + id + "' is open, so its questions and anonymity "
+                    throw new SurveyLifecycleException(Reason.CONTENT_LOCKED, "Survey '" + id + "' is open, so its questions and anonymity "
                             + "cannot change. Duplicate it to make a new version.");
                 }
             }
             case CLOSED -> {
                 if (!updated.equals(current)) {
-                    throw new IllegalStateException("Survey '" + id + "' is closed and cannot be edited. "
+                    throw new SurveyLifecycleException(Reason.CLOSED, "Survey '" + id + "' is closed and cannot be edited. "
                             + "Reopen or duplicate it first.");
                 }
             }
