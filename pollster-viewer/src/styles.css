@@ -1,0 +1,280 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --text: #1b1f27;
+  --muted: #5d6675;
+  --border: #dde1e8;
+  --accent: #2f6fed;
+  --accent-alt: #7a5af8;
+  --track: #e8ebf1;
+  --badge-bg: #e8efff;
+  --badge-text: #1f4fc2;
+  --error: #b42318;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #101319;
+    --surface: #181c24;
+    --text: #e8ebf1;
+    --muted: #9aa3b2;
+    --border: #2a303b;
+    --accent: #6c9bff;
+    --accent-alt: #a18bff;
+    --track: #262c37;
+    --badge-bg: #1e2a47;
+    --badge-text: #a9c3ff;
+    --error: #ff8a80;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #101319;
+  --surface: #181c24;
+  --text: #e8ebf1;
+  --muted: #9aa3b2;
+  --border: #2a303b;
+  --accent: #6c9bff;
+  --accent-alt: #a18bff;
+  --track: #262c37;
+  --badge-bg: #1e2a47;
+  --badge-text: #a9c3ff;
+  --error: #ff8a80;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+h1 {
+  font-size: 1.6rem;
+  line-height: 1.25;
+  margin: 0.25rem 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+h3 {
+  font-size: 0.9rem;
+  margin: 1.25rem 0 0.5rem;
+  color: var(--muted);
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.btn,
+.pager button {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.btn:hover,
+.pager button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.pager button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.badge {
+  display: inline-block;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.description {
+  color: var(--muted);
+  margin: 0.75rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.tile,
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tile {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tile-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.tile-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.card {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card.error {
+  margin-top: 10vh;
+  border-color: var(--error);
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.92rem;
+}
+
+.bar-label {
+  overflow-wrap: anywhere;
+}
+
+.bar-value {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pct {
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--track);
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.bar-fill.alt {
+  background: var(--accent-alt);
+}
+
+.search {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.answers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.answers li {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.answer-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.answer-player {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.875rem;
+}
+
+.footer {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 8px 0 24px;
+}
+
+@media (min-width: 600px) {
+  .page {
+    padding: 32px 24px;
+  }
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 200px));
+  }
+}
