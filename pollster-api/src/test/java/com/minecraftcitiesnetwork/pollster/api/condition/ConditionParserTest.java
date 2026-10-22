@@ -38,7 +38,7 @@ class ConditionParserTest {
     void parse_parentheses() throws Exception {
         Condition parsed = ConditionParser.parse("(answer(a) answered or answer(b) answered) and answer(c) answered");
         assertEquals(
-                new And(new Or(new Answered("a", 2), new Answered("b", 24)), new Answered("c", 46)), parsed);
+                new And(new Or(new Answered("a", 2), new Answered("b", 24)), new Answered("c", 48)), parsed);
     }
 
     @Test
