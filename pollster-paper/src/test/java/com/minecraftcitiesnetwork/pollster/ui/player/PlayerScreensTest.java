@@ -546,4 +546,43 @@ class PlayerScreensTest {
         assertTrue(this.t.sessions.get(this.t.playerId).isEmpty());
         verify(this.t.service, never()).submit(any(), any(), anyString());
     }
+
+    // --- configurable words ------------------------------------------------------------------
+
+    @Test
+    void words_comeFromMessages() {
+        String[][] overrides = {
+                {"survey.button.start", "Begin"}, {"survey.button.not-now", "Later"},
+                {"survey.button.close", "Shut"}, {"survey.button.answer-yes", "Ja"},
+                {"survey.button.answer-no", "Nein"}, {"survey.button.next", "Onward"},
+                {"survey.button.back", "Return"}, {"survey.button.skip", "Pass"},
+                {"survey.button.submit", "Send"}, {"survey.button.cancel", "Abort"},
+                {"survey.list-title", "Polls"}, {"survey.list-state.completed", " - Done"},
+                {"survey.list-state.in-progress", " - Going"}, {"survey.list-state.new", " - Fresh"},
+                {"survey.text-answer-label", "Type here"}};
+        for (String[] o : overrides) {
+            this.t.messages.setMessage(o[0], o[1]);
+        }
+        SurveyDefinition s = open("word-one", yesNo("a"), text("b", false), single("c", 2, false));
+        assertEquals(List.of("Begin", "Later", "Shut"), labels(IntroScreen.create(this.t.ui, s, true)));
+
+        PlayerSession session = this.t.start(s, false);
+        assertEquals(List.of("Ja", "Nein"), labels(QuestionScreen.create(this.t.ui, session, null)));
+        session.flow().answer(new Answer.Choice("yes"));
+        Screen textScreen = QuestionScreen.create(this.t.ui, session, null);
+        assertEquals(List.of("Onward", "Return", "Pass"), labels(textScreen));
+        assertEquals("Type here", plain(((Input.TextInput) textScreen.inputs().get(0)).label()));
+        session.flow().skip();
+        session.flow().skip();
+        assertEquals(List.of("Send", "Return", "Abort"), labels(ReviewScreen.create(this.t.ui, session)));
+        assertTrue(labels(ThanksScreen.create(this.t.ui, s)).contains("Shut"));
+
+        SurveyDefinition other = open("word-two", single("q", 2, true));
+        SurveyDefinition third = open("word-six", single("q", 2, true));
+        Screen list = SurveyListScreen.create(this.t.ui, this.t.player, List.of(s, other, third),
+                Set.of("word-one"), Set.of("word-two"));
+        assertEquals("Polls", plain(list.title()));
+        assertEquals(List.of("Survey word-one - Done", "Survey word-two - Going", "Survey word-six - Fresh", "Shut"),
+                labels(list));
+    }
 }

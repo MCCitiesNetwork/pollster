@@ -32,7 +32,7 @@ public final class PlayerFlow {
     /** {@code /surveys}: the list of surveys this player can see. */
     public void openList(@NotNull Player player) {
         UUID id = player.getUniqueId();
-        this.show.accept(player, Screens.loading(this.ui.style().title("Surveys")));
+        this.show.accept(player, Screens.loading(this.ui.style().title(PlayerScreens.word(this.ui, MessageKeys.SURVEY_LIST_TITLE))));
         List<SurveyDefinition> visible = this.ui.service().visibleTo(player);
         this.ui.service().completed(id).whenComplete((completed, failure) -> {
             if (failure != null || completed == null) {

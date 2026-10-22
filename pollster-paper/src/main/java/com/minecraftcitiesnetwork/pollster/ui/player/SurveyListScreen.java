@@ -23,7 +23,7 @@ public final class SurveyListScreen {
     public static @NotNull Screen create(@NotNull PlayerUi ui, @NotNull Player player,
                                          @NotNull List<SurveyDefinition> visible, @NotNull Set<String> completed,
                                          @NotNull Set<String> inProgress) {
-        Screen.Builder builder = Screen.builder(ui.style().title("Surveys"));
+        Screen.Builder builder = Screen.builder(ui.style().title(PlayerScreens.word(ui, MessageKeys.SURVEY_LIST_TITLE)));
         if (visible.isEmpty()) {
             builder.body(ui.messages().messageFor(MessageKeys.SURVEY_LIST_EMPTY));
         }
@@ -31,13 +31,13 @@ public final class SurveyListScreen {
             if (completed.contains(survey.id())) {
                 // The dialog has no disabled buttons, so a completed survey is gray and does nothing.
                 builder.button(Button.of(
-                        StaffText.render(survey.name()).append(Component.text(" - Completed"))
-                                .colorIfAbsent(NamedTextColor.GRAY), ctx -> { }));
+                        StaffText.render(survey.name()).colorIfAbsent(NamedTextColor.GRAY)
+                                .append(ui.messages().messageFor(MessageKeys.SURVEY_LIST_COMPLETED)), ctx -> { }));
                 continue;
             }
             Component state = inProgress.contains(survey.id())
-                    ? Component.text(" - In progress", NamedTextColor.YELLOW)
-                    : Component.text(" - New", NamedTextColor.GREEN);
+                    ? ui.messages().messageFor(MessageKeys.SURVEY_LIST_IN_PROGRESS)
+                    : ui.messages().messageFor(MessageKeys.SURVEY_LIST_NEW);
             builder.button(Button.of(StaffText.render(survey.name()).colorIfAbsent(NamedTextColor.WHITE).append(state), ctx -> {
                 if (!PlayerScreens.available(ui, survey.id(), false)) {
                     ui.sounds().error(ctx.player());
@@ -49,7 +49,7 @@ public final class SurveyListScreen {
                 ctx.open(IntroScreen.create(ui, ui.service().survey(survey.id()).orElse(survey), false));
             }));
         }
-        builder.button(Button.of(ui.style().secondary("Close"), ScreenContext::close));
+        builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_CLOSE)), ScreenContext::close));
         return builder.build();
     }
 }

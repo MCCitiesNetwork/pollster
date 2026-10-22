@@ -79,9 +79,9 @@ public final class QuestionScreen {
             }
             case YES_NO -> {
                 builder.columns(2);
-                builder.button(Button.of(ui.style().primary("Yes"),
+                builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_YES)),
                         ctx -> submit(ui, session, ctx, step, new Answer.Choice("yes"), null)));
-                builder.button(Button.of(ui.style().danger("No"),
+                builder.button(Button.of(ui.style().danger(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NO)),
                         ctx -> submit(ui, session, ctx, step, new Answer.Choice("no"), null)));
             }
             case MULTIPLE -> {
@@ -94,7 +94,7 @@ public final class QuestionScreen {
                     builder.input(new Input.BoolInput(OPTION_PREFIX + i, StaffText.render(option.label()),
                             selected.contains(option.key())));
                 }
-                builder.button(Button.of(ui.style().primary("Next"), ctx -> {
+                builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NEXT)), ctx -> {
                     Set<String> ticked = new LinkedHashSet<>();
                     for (int i = 0; i < options.size(); i++) {
                         if (Boolean.TRUE.equals(ctx.bool(OPTION_PREFIX + i))) {
@@ -108,9 +108,9 @@ public final class QuestionScreen {
                 String initial = draft != null && draft.text() != null ? draft.text()
                         : existing.filter(Answer.Text.class::isInstance)
                         .map(a -> ((Answer.Text) a).value()).orElse("");
-                builder.input(new Input.TextInput(TEXT_KEY, Component.text("Your answer"), initial,
+                builder.input(new Input.TextInput(TEXT_KEY, Component.text(PlayerScreens.word(ui, MessageKeys.SURVEY_TEXT_ANSWER_LABEL)), initial,
                         ui.settings().textMaxLength(), true));
-                builder.button(Button.of(ui.style().primary("Next"), ctx -> {
+                builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NEXT)), ctx -> {
                     String text = ctx.text(TEXT_KEY);
                     String value = text == null ? "" : text;
                     submit(ui, session, ctx, step, new Answer.Text(value), new Draft(value, Set.of()));
@@ -120,14 +120,14 @@ public final class QuestionScreen {
 
         // Back only makes sense once there is an earlier shown question to return to.
         if (flow.position() > 1) {
-            builder.button(Button.of(ui.style().secondary("Back"), ctx ->
+            builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_BACK)), ctx ->
                     PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                         flow.back();
                         ctx.open(PlayerScreens.current(ui, session));
                     })));
         }
         if (!question.required()) {
-            builder.button(Button.of(ui.style().edit("Skip"), ctx ->
+            builder.button(Button.of(ui.style().edit(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_SKIP)), ctx ->
                     PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                         flow.skip();
                         ui.sounds().next(ctx.player());

@@ -26,7 +26,7 @@ public final class ThanksScreen {
         if (preview) {
             builder.body(ui.messages().messageFor(MessageKeys.SURVEY_THANKS_PREVIEW));
         }
-        builder.button(Button.of(ui.style().secondary("Close"), ScreenContext::close));
+        builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_CLOSE)), ScreenContext::close));
         return builder.build();
     }
 }

@@ -59,6 +59,23 @@ public final class MessageKeys {
     public static final String SURVEY_SAVING = "survey.saving";
     public static final String REMINDER_MESSAGE = "reminder.message";
 
+    // Words on the player survey screens.
+    public static final String SURVEY_BUTTON_START = "survey.button.start";
+    public static final String SURVEY_BUTTON_NOT_NOW = "survey.button.not-now";
+    public static final String SURVEY_BUTTON_CLOSE = "survey.button.close";
+    public static final String SURVEY_BUTTON_YES = "survey.button.answer-yes";
+    public static final String SURVEY_BUTTON_NO = "survey.button.answer-no";
+    public static final String SURVEY_BUTTON_NEXT = "survey.button.next";
+    public static final String SURVEY_BUTTON_BACK = "survey.button.back";
+    public static final String SURVEY_BUTTON_SKIP = "survey.button.skip";
+    public static final String SURVEY_BUTTON_SUBMIT = "survey.button.submit";
+    public static final String SURVEY_BUTTON_CANCEL = "survey.button.cancel";
+    public static final String SURVEY_LIST_TITLE = "survey.list-title";
+    public static final String SURVEY_LIST_COMPLETED = "survey.list-state.completed";
+    public static final String SURVEY_LIST_IN_PROGRESS = "survey.list-state.in-progress";
+    public static final String SURVEY_LIST_NEW = "survey.list-state.new";
+    public static final String SURVEY_TEXT_ANSWER_LABEL = "survey.text-answer-label";
+
     // Admin editor (/pollster).
     public static final String EDITOR_OPEN_WARNING = "editor.open-warning";
     public static final String EDITOR_LOCKED = "editor.locked";

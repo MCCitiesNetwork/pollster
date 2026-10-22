@@ -28,6 +28,11 @@ final class PlayerScreens {
         return preview ? title.append(ui.messages().messageFor(MessageKeys.SURVEY_PREVIEW_MARKER)) : title;
     }
 
+    /** A configurable word from messages.yml as plain text, for the dialog styles to colour. */
+    static @NotNull String word(@NotNull PlayerUi ui, @NotNull String key) {
+        return ui.messages().plaintextMessageFor(key);
+    }
+
     static @NotNull Screen unavailable(@NotNull PlayerUi ui) {
         return Screens.error(ui.style(), ui.messages().messageFor(MessageKeys.SURVEY_UNAVAILABLE), List.of(),
                 ScreenContext::close);

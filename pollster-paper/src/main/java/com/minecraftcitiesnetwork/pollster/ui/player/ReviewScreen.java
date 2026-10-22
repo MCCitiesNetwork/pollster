@@ -47,13 +47,13 @@ public final class ReviewScreen {
             builder.body(ui.style().label(StaffText.render(question.get().text()),
                     describe(ui, question.get(), entry.getValue())));
         }
-        builder.button(new Button(ui.style().primary("Submit"), null, BUTTON_WIDTH, ctx -> submit(ui, session, ctx)));
-        builder.button(new Button(ui.style().secondary("Back"), null, BUTTON_WIDTH, ctx ->
+        builder.button(new Button(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_SUBMIT)), null, BUTTON_WIDTH, ctx -> submit(ui, session, ctx)));
+        builder.button(new Button(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_BACK)), null, BUTTON_WIDTH, ctx ->
                 PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                     session.flow().back();
                     ctx.open(PlayerScreens.current(ui, session));
                 })));
-        builder.button(new Button(ui.style().secondary("Cancel"), null, BUTTON_WIDTH, ctx ->
+        builder.button(new Button(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_CANCEL)), null, BUTTON_WIDTH, ctx ->
                 PlayerScreens.guarded(ui, session, ctx, () -> {
                     ui.sessions().end(ctx.player().getUniqueId());
                     ctx.player().sendMessage(ui.messages().messageFor(MessageKeys.SURVEY_CANCELLED));

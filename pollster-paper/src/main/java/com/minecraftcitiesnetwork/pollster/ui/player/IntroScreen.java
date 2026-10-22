@@ -43,11 +43,11 @@ public final class IntroScreen {
         if (!survey.rewards().isEmpty()) {
             builder.body(ui.messages().messageFor(MessageKeys.SURVEY_INTRO_REWARDS));
         }
-        builder.button(Button.of(ui.style().primary("Start"), ctx -> start(ui, survey.id(), preview, ctx)));
+        builder.button(Button.of(ui.style().primary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_START)), ctx -> start(ui, survey.id(), preview, ctx)));
         if (featured) {
-            builder.button(Button.of(ui.style().secondary("Not now"), ScreenContext::close));
+            builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_NOT_NOW)), ScreenContext::close));
         }
-        builder.button(Button.of(ui.style().secondary("Close"), ScreenContext::close));
+        builder.button(Button.of(ui.style().secondary(PlayerScreens.word(ui, MessageKeys.SURVEY_BUTTON_CLOSE)), ScreenContext::close));
         builder.columns(featured ? 3 : 2);
         return builder.build();
     }
