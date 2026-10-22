@@ -131,4 +131,85 @@ class SurveyValidatorTest {
         assertFalse(SurveyIds.isValidSlug("ab"));
         assertFalse(SurveyIds.isValidSlug("a".repeat(49)));
     }
+
+    private static Question withShowIf(Question q, String showIf) {
+        return new Question(q.key(), q.type(), q.text(), q.options(), q.required(), q.min(), q.max(), showIf);
+    }
+
+    private static Question textQuestion(String key, String showIf) {
+        return new Question(key, QuestionType.TEXT, "Why?", List.of(), false, 0, 0, showIf);
+    }
+
+    private static boolean anyMessageContains(List<ValidationProblem> problems, String... parts) {
+        return problems.stream().anyMatch(p -> {
+            for (String part : parts) {
+                if (!p.message().contains(part)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    @Test
+    void validate_rejectsForwardReference() {
+        List<ValidationProblem> problems = SurveyValidator.validate(survey("town-vote",
+                withShowIf(single("q1", 2), "answer(q2) == \"opt-1\""), single("q2", 2)));
+        assertTrue(anyMessageContains(problems, "q2", "before"));
+    }
+
+    @Test
+    void validate_rejectsSelfReference() {
+        List<ValidationProblem> problems = SurveyValidator.validate(survey("town-vote",
+                withShowIf(single("q1", 2), "answer(q1) == \"opt-1\"")));
+        assertTrue(anyMessageContains(problems, "q1", "before"));
+    }
+
+    @Test
+    void validate_rejectsUnknownQuestionInCondition() {
+        List<ValidationProblem> problems = SurveyValidator.validate(survey("town-vote",
+                single("q1", 2), textQuestion("q2", "answer(ghost) answered")));
+        assertTrue(anyMessageContains(problems, "ghost"));
+    }
+
+    @Test
+    void validate_rejectsUnknownOptionInCondition() {
+        List<ValidationProblem> problems = SurveyValidator.validate(survey("town-vote",
+                single("party", 2), textQuestion("q2", "answer(party) == \"zzz\"")));
+        assertTrue(anyMessageContains(problems, "zzz"));
+    }
+
+    @Test
+    void validate_acceptsAnyValueForTextQuestion() {
+        assertTrue(SurveyValidator.validate(survey("town-vote",
+                textQuestion("q1", null), textQuestion("q2", "answer(q1) == \"anything\""))).isEmpty());
+    }
+
+    @Test
+    void validate_rejectsHasOnSingle() {
+        List<ValidationProblem> problems = SurveyValidator.validate(survey("town-vote",
+                single("party", 2), textQuestion("q2", "answer(party) has \"opt-1\"")));
+        assertTrue(anyMessageContains(problems, "has"));
+    }
+
+    @Test
+    void validate_acceptsHasOnMultiple() {
+        assertTrue(SurveyValidator.validate(survey("town-vote",
+                multiple(false, 1, 0), textQuestion("q2", "answer(many) has \"opt-1\""))).isEmpty());
+    }
+
+    @Test
+    void validate_reportsConditionSyntaxWithColumn() {
+        List<ValidationProblem> problems = SurveyValidator.validate(survey("town-vote",
+                single("q1", 2), textQuestion("q2", "answer(q1) == ")));
+        assertTrue(anyMessageContains(problems, "column"));
+    }
+
+    @Test
+    void validate_rejectsKeywordQuestionKey() {
+        for (String key : List.of("and", "or", "not", "in", "has", "answered", "answer", "permission")) {
+            List<ValidationProblem> problems = SurveyValidator.validate(survey("town-vote", single(key, 2)));
+            assertTrue(anyMessageContains(problems, key, "keyword"), key);
+        }
+    }
 }
