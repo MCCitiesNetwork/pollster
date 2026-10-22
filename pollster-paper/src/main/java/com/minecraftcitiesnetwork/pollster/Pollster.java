@@ -8,6 +8,8 @@ import com.minecraftcitiesnetwork.pollster.config.ConfigLoader;
 import com.minecraftcitiesnetwork.pollster.config.DatabaseConfig;
 import com.minecraftcitiesnetwork.pollster.config.Messages;
 import com.minecraftcitiesnetwork.pollster.config.Settings;
+import com.minecraftcitiesnetwork.namebook.api.NamebookFinder;
+import com.minecraftcitiesnetwork.pollster.names.NamebookPlayerNames;
 import com.minecraftcitiesnetwork.pollster.names.PlayerNames;
 import com.minecraftcitiesnetwork.pollster.names.ServerPlayerNames;
 import com.minecraftcitiesnetwork.pollster.rewards.RewardRunner;
@@ -101,8 +103,7 @@ public final class Pollster extends JavaPlugin {
         LoadReport report = this.store.loadAll();
         getLogger().info("Loaded " + report.loaded() + " surveys");
 
-        // A player-directory plugin may later supply its own PlayerNames in place of this one.
-        PlayerNames names = new ServerPlayerNames(getServer(), this.executorState.network());
+        PlayerNames names = choosePlayerNames();
         this.service = new DefaultSurveyService(this.store, backend, names, this.executorState, getLogger());
         // Blocking variant: the main thread cannot wait on a future that needs the main thread.
         this.service.refreshLocksBlocking();
@@ -216,5 +217,23 @@ public final class Pollster extends JavaPlugin {
 
     public @Nullable RewardRunner rewards() {
         return this.rewards;
+    }
+
+    /** Namebook when it is installed, otherwise the server's own user cache. */
+    private PlayerNames choosePlayerNames() {
+        // Namebook is a soft dependency, so its classes may be absent; check the plugin first.
+        if (getServer().getPluginManager().getPlugin("Namebook") != null) {
+            try {
+                var namebook = NamebookFinder.find(getServer().getServicesManager());
+                if (namebook.isPresent()) {
+                    getLogger().info("Resolving player names through Namebook");
+                    return new NamebookPlayerNames(namebook.get());
+                }
+            } catch (LinkageError e) {
+                getLogger().warning("Namebook is installed but its API could not be loaded: " + e);
+            }
+        }
+        getLogger().info("Resolving player names from the server's user cache");
+        return new ServerPlayerNames(getServer(), this.executorState.network());
     }
 }

@@ -23,3 +23,10 @@ permissions:
       Take every survey that requires a permission. Each such survey checks its own node,
       pollster.survey.<survey id>, which cannot be listed here because survey ids are chosen in game.
     default: false
+
+dependencies:
+  server:
+    Namebook:
+      load: BEFORE
+      required: false
+      join-classpath: true

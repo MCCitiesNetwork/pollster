@@ -8,6 +8,8 @@ plugins {
 dependencies {
     implementation(project(":pollster-backend"))
     compileOnly("io.papermc.paper:paper-api:26.3.build.211-stable")
+    // Soft dependency: the API classes come from the Namebook plugin at runtime (join-classpath).
+    compileOnly("com.minecraftcitiesnetwork:namebook-api:1.0.0-SNAPSHOT")
     implementation("org.incendo:cloud-paper:2.0.1")
     implementation("org.spongepowered:configurate-yaml:4.2.0")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.18.2")
@@ -16,6 +18,7 @@ dependencies {
     implementation("com.minecraftcitiesnetwork:plugin-infrastructure:1.0.0-SNAPSHOT")
 
     testImplementation("io.papermc.paper:paper-api:26.3.build.211-stable")
+    testImplementation("com.minecraftcitiesnetwork:namebook-api:1.0.0-SNAPSHOT")
     testImplementation("org.mockito:mockito-core:5.23.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.23.0")
 }
