@@ -24,17 +24,12 @@ repositories {
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
     maven {
-        name = "mccities-releases"
+        name = "minecraftcitiesnetwork-releases"
         url = uri("https://maven.minecraftcitiesnetwork.com/releases")
     }
     maven {
-        name = "mccities-snapshots"
+        name = "minecraftcitiesnetwork-snapshots"
         url = uri("https://maven.minecraftcitiesnetwork.com/snapshots")
-    }
-    maven {
-        name = "democracycraft-snapshots"
-        url = uri("https://maven.democracycraft.net/snapshots")
-        content { includeGroup("com.minecraftcitiesnetwork") }
     }
 }
 
