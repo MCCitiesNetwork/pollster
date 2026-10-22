@@ -21,3 +21,41 @@ ui:
 errors:
   # Any stale dialog button: the survey was closed, reloaded or deleted, or the session ended.
   survey-unavailable: '<prefix><red>This survey is no longer available.'
+
+# Player-facing survey screens. <name>, <count>, <position>, <total>, <min>, <max> are filled in.
+survey:
+  list:
+    empty: '<gray>There are no surveys available right now.'
+    load-failed: '<red>The surveys could not be loaded. Try again in a moment.'
+  intro:
+    questions: '<aqua>Questions: <gray><count>'
+    anonymous: '<gray>Your answers are anonymous.'
+    named: '<gray>Your name is recorded with your answers.'
+    rewards: '<green>Completing this survey gives rewards.'
+  question:
+    header: '<aqua>Question <white><position></white> of <white><total></white>'
+  invalid:
+    required: '<red>This question needs an answer.'
+    too-few: '<red>Pick at least <min>.'
+    too-many: '<red>Pick at most <max>.'
+    too-long: '<red>That answer is too long. The limit is <max> characters.'
+    generic: '<red>That answer could not be used. Try again.'
+  review:
+    intro: '<gray>Check your answers, then submit.'
+    skipped: '(skipped)'
+  thanks:
+    body: '<green>Thank you for completing <white><name></white>.'
+    preview: '<gray>This was a preview. Nothing was saved and no rewards were given.'
+  preview-marker: ' <red><bold>[PREVIEW]'
+  replace:
+    title: 'Replace unfinished survey?'
+    body: '<gray>You have an unfinished survey. Starting this one discards it.'
+  already-responded: '<red>You have already completed this survey.'
+  submit-failed: '<red>Your answers could not be saved. Please try again.'
+  submit-cancelled: '<red>Your submission was cancelled.'
+  cancelled: '<gray>Survey cancelled. Nothing was saved.'
+  no-unfinished: '<prefix><gray>You have no unfinished survey.'
+  saving: '<gray>Saving your answers...'
+
+reminder:
+  message: "<prefix><yellow>You have an unfinished survey. <click:run_command:'/surveys resume'><hover:show_text:'<gray>Continue your survey'><green><underlined>Click to continue</underlined></green></hover></click>"
