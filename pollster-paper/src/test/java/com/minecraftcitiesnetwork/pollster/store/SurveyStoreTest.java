@@ -45,6 +45,11 @@ class SurveyStoreTest {
                         new Question("yn", QuestionType.YES_NO, "Sure?", List.of(), true, 0, 0, null)));
     }
 
+    private static SurveyDefinition withId(SurveyDefinition s, String id) {
+        return new SurveyDefinition(id, s.name(), s.description(), s.status(), s.anonymous(), s.featured(),
+                s.requiresPermission(), s.rewards(), s.questions());
+    }
+
     private SurveyStore store() {
         return new SurveyStore(this.dir, Logger.getAnonymousLogger());
     }
@@ -131,5 +136,36 @@ class SurveyStoreTest {
         assertFalse(yesNoBlock.contains("options"), yesNoBlock);
         String textBlock = text.substring(text.indexOf("key: text"), text.indexOf("key: many"));
         assertFalse(textBlock.contains("options"), textBlock);
+    }
+
+    @Test
+    void save_concurrentWritesKeepEverySurvey() throws Exception {
+        SurveyStore store = store();
+        int count = 40;
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+        java.util.concurrent.CountDownLatch go = new java.util.concurrent.CountDownLatch(1);
+        List<java.util.concurrent.Future<?>> futures = new java.util.ArrayList<>();
+        try {
+            for (int i = 0; i < count; i++) {
+                String id = "survey-" + i;
+                futures.add(pool.submit(() -> {
+                    go.await();
+                    store.save(withId(everything(), id));
+                    // Same id from several threads at once must not trip over a shared temp file.
+                    store.save(withId(everything(), "shared-one"));
+                    return null;
+                }));
+            }
+            go.countDown();
+            for (java.util.concurrent.Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(count + 1, store.all().size());
+        try (Stream<Path> files = Files.list(this.dir)) {
+            assertEquals(count + 1, files.count());
+        }
     }
 }
