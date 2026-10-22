@@ -1,0 +1,85 @@
+package com.minecraftcitiesnetwork.pollster.ui;
+
+import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
+import net.kyori.adventure.text.Component;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Dialog text styles. Each style is a MiniMessage template under {@code ui.style.*} with a
+ * {@code <text>} tag, so server owners can recolour dialogs in messages.yml. Text is always
+ * inserted unparsed, so survey names and player input cannot inject markup.
+ */
+public final class Style {
+
+    public static final String TITLE = "ui.style.title";
+    public static final String DANGER = "ui.style.danger";
+    public static final String PRIMARY = "ui.style.primary";
+    public static final String EDIT = "ui.style.edit";
+    public static final String SECONDARY = "ui.style.secondary";
+    public static final String LABEL = "ui.style.label";
+    public static final String ERROR = "ui.style.error";
+
+    /** Used for any key the configured container lacks, so a trimmed messages.yml still renders. */
+    private static final MessageContainer DEFAULTS = new MessageContainer();
+
+    static {
+        DEFAULTS.setMessage(TITLE, "<gold><bold><text>");
+        DEFAULTS.setMessage(DANGER, "<red><bold><text>");
+        DEFAULTS.setMessage(PRIMARY, "<green><bold><text>");
+        DEFAULTS.setMessage(EDIT, "<yellow><bold><text>");
+        DEFAULTS.setMessage(SECONDARY, "<gray><text>");
+        DEFAULTS.setMessage(LABEL, "<aqua><text>: <gray><value>");
+        DEFAULTS.setMessage(ERROR, "<red><text>");
+    }
+
+    private final MessageContainer messages;
+
+    public Style(@NotNull MessageContainer messages) {
+        this.messages = messages;
+    }
+
+    /** A style using only the built-in defaults. */
+    public static @NotNull Style defaults() {
+        return new Style(new MessageContainer());
+    }
+
+    public @NotNull Component title(@NotNull String text) {
+        return render(TITLE, text);
+    }
+
+    /** Destructive actions and confirmation titles. */
+    public @NotNull Component danger(@NotNull String text) {
+        return render(DANGER, text);
+    }
+
+    public @NotNull Component primary(@NotNull String text) {
+        return render(PRIMARY, text);
+    }
+
+    /** Edit and navigation into a sub-screen. */
+    public @NotNull Component edit(@NotNull String text) {
+        return render(EDIT, text);
+    }
+
+    /** Back, Close, Cancel, page controls. */
+    public @NotNull Component secondary(@NotNull String text) {
+        return render(SECONDARY, text);
+    }
+
+    public @NotNull Component label(@NotNull String text, @NotNull Component value) {
+        return renderWith(LABEL, text, value);
+    }
+
+    public @NotNull Component error(@NotNull String text) {
+        return render(ERROR, text);
+    }
+
+    private @NotNull Component render(@NotNull String key, @NotNull String text) {
+        return renderWith(key, text, Component.empty());
+    }
+
+    private @NotNull Component renderWith(@NotNull String key, @NotNull String text, @NotNull Component value) {
+        MessageContainer source = this.messages.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : this.messages;
+        return source.messageFor(key, MessageContainer.value("text", text), MessageContainer.markup("value", value));
+    }
+}

@@ -1,0 +1,9 @@
+ui:
+  style:
+    title: "<gold><bold><text>"
+    danger: "<red><bold><text>"
+    primary: "<green><bold><text>"
+    edit: "<yellow><bold><text>"
+    secondary: "<gray><text>"
+    label: "<aqua><text>: <gray><value>"
+    error: "<red><text>"
