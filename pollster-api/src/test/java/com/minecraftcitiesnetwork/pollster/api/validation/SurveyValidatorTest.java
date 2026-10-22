@@ -212,4 +212,43 @@ class SurveyValidatorTest {
             assertTrue(anyMessageContains(problems, key, "keyword"), key);
         }
     }
+
+    private static SurveyDefinition raw(String name, List<com.minecraftcitiesnetwork.pollster.api.model.Reward> rewards,
+                                        List<Question> questions) {
+        return new SurveyDefinition("town-vote", name, "d", SurveyStatus.DRAFT, false, false, false, rewards, questions);
+    }
+
+    private static void assertReports(List<ValidationProblem> problems, String fragment) {
+        assertTrue(problems.stream().anyMatch(p -> p.message().contains(fragment)), problems.toString());
+    }
+
+    @Test
+    void validate_reportsBlankSurveyName() {
+        assertReports(SurveyValidator.validate(raw(" ", List.of(), List.of(single("q1", 2)))), "name");
+        assertReports(SurveyValidator.validate(raw(null, List.of(), List.of(single("q1", 2)))), "name");
+    }
+
+    @Test
+    void validate_reportsBlankQuestionText() {
+        Question q = new Question("q1", QuestionType.SINGLE, " ", options(2), true, 1, 0, null);
+        assertReports(SurveyValidator.validate(raw("N", List.of(), List.of(q))), "text");
+    }
+
+    @Test
+    void validate_reportsNullQuestionType() {
+        Question q = new Question("q1", null, "Pick", options(2), true, 1, 0, null);
+        assertReports(SurveyValidator.validate(raw("N", List.of(), List.of(q))), "type");
+    }
+
+    @Test
+    void validate_reportsNullOptions() {
+        Question q = new Question("q1", QuestionType.SINGLE, "Pick", null, true, 1, 0, null);
+        assertReports(SurveyValidator.validate(raw("N", List.of(), List.of(q))), "options");
+    }
+
+    @Test
+    void validate_reportsNullRewardsAndQuestions() {
+        assertReports(SurveyValidator.validate(raw("N", null, List.of(single("q1", 2)))), "rewards");
+        assertReports(SurveyValidator.validate(raw("N", List.of(), null)), "questions");
+    }
 }

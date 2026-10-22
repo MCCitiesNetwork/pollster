@@ -31,6 +31,11 @@ repositories {
         name = "mccities-snapshots"
         url = uri("https://maven.minecraftcitiesnetwork.com/snapshots")
     }
+    maven {
+        name = "democracycraft-snapshots"
+        url = uri("https://maven.democracycraft.net/snapshots")
+        content { includeGroup("com.minecraftcitiesnetwork") }
+    }
 }
 
 dependencies {

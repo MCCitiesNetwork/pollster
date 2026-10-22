@@ -17,6 +17,14 @@ ui:
     secondary: '<gray><text>'
     label: '<aqua><text>: </aqua><gray><value>'
     error: '<red><text>'
+  # Plain words used by the shared confirm, error and loading dialogs.
+  button:
+    confirm: 'Confirm'
+    cancel: 'Cancel'
+    ok: 'OK'
+  title:
+    error: 'Error'
+  loading: 'Loading...'
 
 errors:
   # Any stale dialog button: the survey was closed, reloaded or deleted, or the session ended.

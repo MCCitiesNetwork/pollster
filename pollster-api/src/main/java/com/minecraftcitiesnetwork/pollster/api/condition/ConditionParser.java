@@ -10,7 +10,10 @@ import java.util.List;
 public final class ConditionParser {
 
     private final List<Token> tokens;
+    private static final int MAX_DEPTH = 32;
+
     private int index;
+    private int depth;
 
     private ConditionParser(List<Token> tokens) {
         this.tokens = tokens;
@@ -47,7 +50,12 @@ public final class ConditionParser {
     private Condition not() throws ConditionParseException {
         if (peek().type() == Token.Type.NOT) {
             advance();
-            return new Condition.Not(not());
+            enter(peek());
+            try {
+                return new Condition.Not(not());
+            } finally {
+                this.depth--;
+            }
         }
         return atom();
     }
@@ -57,8 +65,10 @@ public final class ConditionParser {
         switch (token.type()) {
             case LPAREN -> {
                 advance();
+                enter(token);
                 Condition inner = or();
                 expect(Token.Type.RPAREN, "')'");
+                this.depth--;
                 return inner;
             }
             case PERMISSION -> {
@@ -124,6 +134,14 @@ public final class ConditionParser {
         }
         expect(Token.Type.RBRACKET, "']'");
         return values;
+    }
+
+    // Bounds recursion so a hand-edited file cannot overflow the stack.
+    private void enter(Token at) throws ConditionParseException {
+        this.depth++;
+        if (this.depth > MAX_DEPTH) {
+            throw new ConditionParseException("Nested more than " + MAX_DEPTH + " levels deep", at.column());
+        }
     }
 
     private Token peek() {

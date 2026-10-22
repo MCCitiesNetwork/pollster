@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS pollster_survey_state (
   survey_id     VARCHAR(48) PRIMARY KEY,
   content_hash  CHAR(64)    NOT NULL,
-  opened_at     TIMESTAMP   NOT NULL,
-  closed_at     TIMESTAMP   NULL
+  opened_at     DATETIME   NOT NULL,
+  closed_at     DATETIME   NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS pollster_responses (
@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS pollster_responses (
   survey_id     VARCHAR(48) NOT NULL,
   player_uuid   BINARY(16)  NOT NULL,
   player_name   VARCHAR(16) NOT NULL,
-  started_at    TIMESTAMP   NOT NULL,
-  submitted_at  TIMESTAMP   NOT NULL,
+  started_at    DATETIME   NOT NULL,
+  submitted_at  DATETIME   NOT NULL,
   UNIQUE KEY uq_response (survey_id, player_uuid),
   KEY ix_survey (survey_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -28,5 +28,5 @@ CREATE TABLE IF NOT EXISTS pollster_answers (
 
 CREATE TABLE IF NOT EXISTS pollster_player_state (
   player_uuid       BINARY(16) PRIMARY KEY,
-  last_featured_at  TIMESTAMP  NULL
+  last_featured_at  DATETIME  NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

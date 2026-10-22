@@ -23,11 +23,11 @@ public record Question(
 
     public Question {
         // YES_NO always stores the keys yes and no, so whatever a file or editor supplies is ignored.
-        options = type == QuestionType.YES_NO ? YES_NO_OPTIONS : List.copyOf(options);
+        options = type == QuestionType.YES_NO ? YES_NO_OPTIONS : options == null ? null : List.copyOf(options);
     }
 
     /** The largest number of selections allowed, with the "0 means option count" default resolved. */
     public int effectiveMax() {
-        return this.max == 0 ? this.options.size() : this.max;
+        return this.max == 0 ? (this.options == null ? 0 : this.options.size()) : this.max;
     }
 }

@@ -45,7 +45,10 @@ public final class RewardRunner {
             case Reward.MessageReward r -> player.sendMessage(parse(r.miniMessage(), player, survey));
             case Reward.BroadcastReward r -> this.server.broadcast(parse(r.miniMessage(), player, survey));
             case Reward.TitleReward r -> player.showTitle(Title.title(
-                    parse(r.title(), player, survey), parse(r.subtitle(), player, survey)));
+                    parse(r.title(), player, survey),
+                    // A missing subtitle is legal in a survey file; show an empty one rather than fail.
+                    r.subtitle() == null || r.subtitle().isBlank()
+                            ? Component.empty() : parse(r.subtitle(), player, survey)));
         }
     }
 

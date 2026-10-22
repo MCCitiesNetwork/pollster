@@ -64,7 +64,9 @@ val startDevDb = tasks.register<Exec>("startDevDb") {
         // Only fill in a missing or blank config. Never clobber real credentials
         // someone has pointed at their own database.
         val existing = if (configFile.isFile) configFile.readText() else ""
-        val hasUrl = Regex("""^\s*url:\s*(?!['"]?\s*$).+""", RegexOption.MULTILINE).containsMatchIn(existing)
+        // A url that is empty, or only quotes and spaces, counts as missing.
+        val hasUrl = Regex("""^[ \t]*url:[ \t]*(.*)$""", RegexOption.MULTILINE).findAll(existing)
+                .any { it.groupValues[1].trim().trim('\'', '"').isNotBlank() }
         if (hasUrl) {
             logger.lifecycle("Dev database up; leaving existing ${configFile.name} untouched.")
         } else {
@@ -131,6 +133,7 @@ tasks {
         relocate("org.spongepowered", "${base}.org.spongepowered")
         relocate("org.yaml", "${base}.org.yaml")
         relocate("io.leangen.geantyref", "${base}.io.leangen.geantyref")
+        relocate("org.jspecify", "${base}.org.jspecify")
         relocate("org.jetbrains.annotations", "${base}.org.jetbrains.annotations")
         relocate("org.intellij.lang", "${base}.org.intellij.lang")
         relocate("net.kyori.option", "${base}.net.kyori.option")
