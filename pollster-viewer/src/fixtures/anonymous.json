@@ -1,0 +1,290 @@
+{
+  "format": 1,
+  "generatedAt": "2026-10-22T18:00:00Z",
+  "survey": {
+    "id": "tree-poll-anon",
+    "name": "City Priorities (anonymous)",
+    "description": "Help shape what the city builds next. Thanks for taking part!",
+    "anonymous": true,
+    "openedAt": "2026-10-01T09:00:00Z",
+    "closedAt": "2026-10-20T09:00:00Z"
+  },
+  "totals": {
+    "participants": 52,
+    "averageSeconds": 184
+  },
+  "questions": [
+    {
+      "key": "tree",
+      "type": "SINGLE",
+      "text": "Which tree should be the city symbol?",
+      "shownTo": 52,
+      "skipped": 0,
+      "options": [
+        {
+          "key": "alder",
+          "label": "Alder",
+          "votes": 1
+        },
+        {
+          "key": "birch",
+          "label": "Birch",
+          "votes": 9
+        },
+        {
+          "key": "cedar",
+          "label": "Cedar",
+          "votes": 8
+        },
+        {
+          "key": "dogwood",
+          "label": "Dogwood",
+          "votes": 11
+        },
+        {
+          "key": "elm",
+          "label": "Elm",
+          "votes": 5
+        },
+        {
+          "key": "fir",
+          "label": "Fir",
+          "votes": 4
+        },
+        {
+          "key": "ginkgo",
+          "label": "Ginkgo",
+          "votes": 3
+        },
+        {
+          "key": "hazel",
+          "label": "Hazel",
+          "votes": 2
+        },
+        {
+          "key": "ironwood",
+          "label": "Ironwood",
+          "votes": 1
+        },
+        {
+          "key": "juniper",
+          "label": "Juniper",
+          "votes": 1
+        },
+        {
+          "key": "katsura",
+          "label": "Katsura",
+          "votes": 7
+        },
+        {
+          "key": "larch",
+          "label": "Larch",
+          "votes": 0
+        }
+      ]
+    },
+    {
+      "key": "issues",
+      "type": "MULTIPLE",
+      "text": "Which issues matter most? Pick up to three.",
+      "shownTo": 52,
+      "skipped": 0,
+      "options": [
+        {
+          "key": "transit",
+          "label": "Public transport",
+          "votes": 31
+        },
+        {
+          "key": "parks",
+          "label": "Parks and green space",
+          "votes": 27
+        },
+        {
+          "key": "housing",
+          "label": "Housing",
+          "votes": 22
+        },
+        {
+          "key": "events",
+          "label": "Community events",
+          "votes": 18
+        },
+        {
+          "key": "safety",
+          "label": "Safety",
+          "votes": 9
+        }
+      ],
+      "selectionsPerRespondent": {
+        "1": 10,
+        "2": 25,
+        "3": 17
+      }
+    },
+    {
+      "key": "reason",
+      "type": "TEXT",
+      "text": "Anything else you want the council to know?",
+      "shownTo": 30,
+      "skipped": 2,
+      "answers": [
+        {
+          "text": "Add a library",
+          "player": null
+        },
+        {
+          "text": "Nothing to add",
+          "player": null
+        },
+        {
+          "text": "Wider sidewalks",
+          "player": null
+        },
+        {
+          "text": "Needs more events",
+          "player": null
+        },
+        {
+          "text": "Great work so far",
+          "player": null
+        },
+        {
+          "text": "Clearer plot rules",
+          "player": null
+        },
+        {
+          "text": "More police presence",
+          "player": null
+        },
+        {
+          "text": "Less noise from farms",
+          "player": null
+        },
+        {
+          "text": "Reduce the plot price",
+          "player": null
+        },
+        {
+          "text": "Protect old buildings",
+          "player": null
+        },
+        {
+          "text": "Please add a city hall",
+          "player": null
+        },
+        {
+          "text": "Open the north district",
+          "player": null
+        },
+        {
+          "text": "Improve the spawn signs",
+          "player": null
+        },
+        {
+          "text": "I like the current mayor",
+          "player": null
+        },
+        {
+          "text": "Hold more build contests",
+          "player": null
+        },
+        {
+          "text": "Keep the server friendly",
+          "player": null
+        },
+        {
+          "text": "More parks near the spawn",
+          "player": null
+        },
+        {
+          "text": "Fix the lag at the market",
+          "player": null
+        },
+        {
+          "text": "Lower taxes on small shops",
+          "player": null
+        },
+        {
+          "text": "Faster road building tools",
+          "player": null
+        },
+        {
+          "text": "Use <b>x</b> in this reply",
+          "player": null
+        },
+        {
+          "text": "A tram line would be great",
+          "player": null
+        },
+        {
+          "text": "Let players vote more often",
+          "player": null
+        },
+        {
+          "text": "More space for new builders",
+          "player": null
+        },
+        {
+          "text": "Celebrate city anniversaries",
+          "player": null
+        },
+        {
+          "text": "Better public transport please",
+          "player": null
+        },
+        {
+          "text": "More tutorials for new players",
+          "player": null
+        },
+        {
+          "text": "Keep the build limits as they are",
+          "player": null
+        }
+      ]
+    },
+    {
+      "key": "return",
+      "type": "YES_NO",
+      "text": "Will you keep playing next month?",
+      "shownTo": 52,
+      "skipped": 0,
+      "options": [
+        {
+          "key": "yes",
+          "label": "Yes",
+          "votes": 44
+        },
+        {
+          "key": "no",
+          "label": "No",
+          "votes": 8
+        }
+      ]
+    },
+    {
+      "key": "rating",
+      "type": "SINGLE",
+      "text": "How do you rate the market? (optional)",
+      "shownTo": 52,
+      "skipped": 9,
+      "options": [
+        {
+          "key": "ok",
+          "label": "Okay",
+          "votes": 13
+        },
+        {
+          "key": "good",
+          "label": "Good",
+          "votes": 24
+        },
+        {
+          "key": "bad",
+          "label": "Poor",
+          "votes": 6
+        }
+      ]
+    }
+  ]
+}
