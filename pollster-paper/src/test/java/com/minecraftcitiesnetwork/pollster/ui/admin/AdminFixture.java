@@ -77,6 +77,16 @@ final class AdminFixture {
                 throw new UncheckedIOException(e);
             }
         });
+        Mockito.when(this.service.create(any())).thenAnswer(i -> {
+            try {
+                this.store.save(i.getArgument(0));
+                return CompletableFuture.completedFuture(null);
+            } catch (IllegalArgumentException e) {
+                return CompletableFuture.failedFuture(e);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        });
         Mockito.when(this.service.open(anyString())).thenAnswer(i -> {
             save(this.store.get(i.getArgument(0)).orElseThrow().withStatus(SurveyStatus.OPEN));
             return CompletableFuture.completedFuture(new OpenResult.Opened());

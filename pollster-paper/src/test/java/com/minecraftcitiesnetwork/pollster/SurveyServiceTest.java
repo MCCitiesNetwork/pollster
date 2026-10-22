@@ -225,12 +225,31 @@ class SurveyServiceTest {
     }
 
     @Test
-    void save_newSurveyMustBeDraft() {
-        Throwable cause = failure(() -> this.service.save(survey("poll-new", SurveyStatus.OPEN)).join());
+    void create_newSurveyMustBeDraft() {
+        Throwable cause = failure(() -> this.service.create(survey("poll-new", SurveyStatus.OPEN)).join());
         assertInstanceOf(IllegalStateException.class, cause);
         assertFalse(this.store.exists("poll-new"));
-        this.service.save(survey("poll-new", SurveyStatus.DRAFT)).join();
+        this.service.create(survey("poll-new", SurveyStatus.DRAFT)).join();
         assertTrue(this.store.exists("poll-new"));
+    }
+
+    @Test
+    void create_rejectsTakenId() throws Exception {
+        SurveyDefinition existing = saved("poll-one", SurveyStatus.DRAFT);
+        assertInstanceOf(IllegalArgumentException.class,
+                failure(() -> this.service.create(with(existing, true, true)).join()));
+        assertEquals(existing, this.store.get("poll-one").orElseThrow());
+    }
+
+    @Test
+    void save_cannotRecreateDeletedSurvey() throws Exception {
+        SurveyDefinition draft = saved("poll-one", SurveyStatus.DRAFT);
+        this.service.delete("poll-one").join();
+        // A hub opened before the delete saves a toggle afterwards.
+        assertEquals(SurveyLifecycleException.Reason.MISSING,
+                reasonOf(() -> this.service.save(with(draft, false, true)).join()));
+        assertFalse(this.store.exists("poll-one"));
+        assertFalse(Files.exists(this.dir.resolve("poll-one.yml")));
     }
 
     @Test

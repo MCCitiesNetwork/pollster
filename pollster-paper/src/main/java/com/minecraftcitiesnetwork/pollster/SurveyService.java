@@ -60,12 +60,19 @@ public interface SurveyService {
     @NotNull CompletableFuture<Void> reopen(@NotNull String surveyId);
 
     /**
-     * Saves a survey definition (editor changes). Fails with IllegalArgumentException listing
-     * validation problems, and with IllegalStateException when the save would break the
-     * lifecycle: a status change (new surveys start as DRAFT), a content change (questions or
-     * anonymity) on an OPEN survey, or any change to a CLOSED survey.
+     * Saves editor changes to an existing survey. Fails with IllegalArgumentException listing
+     * validation problems, and with {@link SurveyLifecycleException} when the save would break the
+     * lifecycle: a status change, a content change (questions or anonymity) on an OPEN survey,
+     * any change to a CLOSED survey, or a survey whose file no longer exists (so a stale dialog
+     * cannot bring back a deleted survey).
      */
     @NotNull CompletableFuture<Void> save(@NotNull SurveyDefinition survey);
+
+    /**
+     * Writes a new DRAFT survey. Fails with IllegalArgumentException for validation problems or a
+     * taken id, and with IllegalStateException when the survey is not a DRAFT.
+     */
+    @NotNull CompletableFuture<Void> create(@NotNull SurveyDefinition survey);
 
     /** Copies any survey into a new DRAFT under {@code newId}, with no database state. */
     @NotNull CompletableFuture<SurveyDefinition> duplicate(@NotNull String sourceId, @NotNull String newId);

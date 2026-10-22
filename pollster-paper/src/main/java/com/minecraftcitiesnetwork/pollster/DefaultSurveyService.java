@@ -34,7 +34,6 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Combines survey files with database state. Blocking work runs on the database executor; every
@@ -243,7 +242,28 @@ public final class DefaultSurveyService implements SurveyService {
             return CompletableFuture.failedFuture(new IllegalArgumentException(describe(problems)));
         }
         return onDatabase(() -> underWriteLock(survey.id(), () -> {
-            checkEditable(this.store.get(survey.id()).orElse(null), survey);
+            SurveyDefinition current = this.store.get(survey.id()).orElseThrow(() -> new SurveyLifecycleException(
+                    Reason.MISSING, "Survey '" + survey.id() + "' no longer exists, so it cannot be saved."));
+            checkEditable(current, survey);
+            writeFile(survey);
+            return (Void) null;
+        })).thenAccept(ignored -> recomputeLock(survey.id()));
+    }
+
+    @Override
+    public @NotNull CompletableFuture<Void> create(@NotNull SurveyDefinition survey) {
+        List<ValidationProblem> problems = SurveyValidator.validate(survey);
+        if (!problems.isEmpty()) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException(describe(problems)));
+        }
+        if (survey.status() != SurveyStatus.DRAFT) {
+            return CompletableFuture.failedFuture(new IllegalStateException(
+                    "A new survey must start as a draft; status changes only through open, close and reopen."));
+        }
+        return onDatabase(() -> underWriteLock(survey.id(), () -> {
+            if (this.store.exists(survey.id())) {
+                throw new IllegalArgumentException("A survey with id '" + survey.id() + "' already exists.");
+            }
             writeFile(survey);
             return (Void) null;
         })).thenAccept(ignored -> recomputeLock(survey.id()));
@@ -254,15 +274,8 @@ public final class DefaultSurveyService implements SurveyService {
      * open, close and reopen; an open survey keeps its content hash (questions and anonymity);
      * a closed survey does not change at all.
      */
-    private static void checkEditable(@Nullable SurveyDefinition current, SurveyDefinition updated) {
+    private static void checkEditable(SurveyDefinition current, SurveyDefinition updated) {
         String id = updated.id();
-        if (current == null) {
-            if (updated.status() != SurveyStatus.DRAFT) {
-                throw new IllegalStateException("A new survey must start as a draft; status changes only "
-                        + "through open, close and reopen.");
-            }
-            return;
-        }
         if (updated.status() != current.status()) {
             throw new SurveyLifecycleException(Reason.STATUS_CHANGED, "Survey '" + id + "' cannot change status by saving; status changes "
                     + "only through open, close and reopen.");

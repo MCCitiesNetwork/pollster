@@ -70,6 +70,8 @@ class CreateWizardTest {
         assertFalse(s.featured());
         assertTrue(s.requiresPermission());
         assertTrue(s.questions().isEmpty());
+        // create, not save: a save of a survey with no file is refused so stale dialogs cannot revive deletes.
+        org.mockito.Mockito.verify(f.service).create(org.mockito.ArgumentMatchers.any());
         // The name is staff text: the hub renders its formatting rather than showing the tags.
         assertTrue(plain(ctx.last()).contains("Survey: New Poll"), plain(ctx.last()));
     }

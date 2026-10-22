@@ -94,7 +94,7 @@ public final class CreateWizard {
                 SurveyStatus.DRAFT, draft.anonymous(), draft.featured(), draft.requiresPermission(),
                 List.of(), List.of());
         ctx.open(AdminSupport.loading(ui));
-        ui.service().save(survey).whenComplete((ignored, error) -> {
+        ui.service().create(survey).whenComplete((ignored, error) -> {
             if (error != null) {
                 ctx.open(AdminSupport.failure(ui, error, c -> c.open(confirm(ui, draft))));
                 return;
