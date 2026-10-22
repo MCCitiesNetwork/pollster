@@ -19,6 +19,13 @@ public final class MessageKeys {
     /** Shown for any stale dialog button: survey closed, reloaded, deleted, or session ended. */
     public static final String SURVEY_UNAVAILABLE = "errors.survey-unavailable";
 
+    public static final String PUBLISH_SUCCESS = "publish.success";
+    public static final String PUBLISH_FAILED = "publish.failed";
+    public static final String EXPORT_SUCCESS = "export.success";
+    public static final String EXPORT_FAILED = "export.failed";
+    public static final String REPORT_PLAYER_ONLY = "report.player-only";
+    public static final String REPORT_UNKNOWN_SURVEY = "report.unknown-survey";
+
     private MessageKeys() {
     }
 }
