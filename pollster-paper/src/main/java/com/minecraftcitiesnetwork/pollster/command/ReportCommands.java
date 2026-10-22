@@ -7,12 +7,12 @@ import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import com.minecraftcitiesnetwork.pollster.config.Messages;
 import com.minecraftcitiesnetwork.pollster.publish.ReportPublisher;
 import com.minecraftcitiesnetwork.pollster.ui.admin.ReportScreen;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.incendo.cloud.CommandManager;
 import org.incendo.cloud.component.CommandComponent;
 import org.incendo.cloud.context.CommandContext;
+import org.incendo.cloud.paper.util.sender.Source;
 import org.incendo.cloud.parser.standard.StringParser;
 import org.incendo.cloud.suggestion.SuggestionProvider;
 import org.jetbrains.annotations.NotNull;
@@ -42,7 +42,7 @@ public final class ReportCommands {
         this.messages = messages;
     }
 
-    public void register(@NotNull CommandManager<CommandSourceStack> manager) {
+    public void register(@NotNull CommandManager<Source> manager) {
         // Dialogs need a player; publish and export only send chat, so the console may run them.
         manager.command(command(manager, "report", (sender, id) -> {
             if (sender instanceof Player player) {
@@ -55,18 +55,17 @@ public final class ReportCommands {
         manager.command(command(manager, "export", this.publisher::export));
     }
 
-    private org.incendo.cloud.Command<CommandSourceStack> command(CommandManager<CommandSourceStack> manager,
-                                                                   String literal,
-                                                                   BiConsumer<CommandSender, String> action) {
-        CommandComponent.Builder<CommandSourceStack, String> id = CommandComponent
-                .<CommandSourceStack, String>builder("id", StringParser.stringParser())
+    private org.incendo.cloud.Command<Source> command(CommandManager<Source> manager, String literal,
+                                                      BiConsumer<CommandSender, String> action) {
+        CommandComponent.Builder<Source, String> id = CommandComponent
+                .<Source, String>builder("id", StringParser.stringParser())
                 .suggestionProvider(SuggestionProvider.blockingStrings((context, input) -> surveyIds()));
         return manager.commandBuilder("pollster")
                 .literal(literal)
                 .required(id)
                 .permission(PERMISSION)
-                .handler((CommandContext<CommandSourceStack> context) -> {
-                    CommandSender sender = context.sender().getSender();
+                .handler((CommandContext<Source> context) -> {
+                    CommandSender sender = context.sender().source();
                     String surveyId = context.get("id");
                     if (this.service.survey(surveyId).isEmpty()) {
                         sender.sendMessage(this.messages.get().messageFor(MessageKeys.REPORT_UNKNOWN_SURVEY,

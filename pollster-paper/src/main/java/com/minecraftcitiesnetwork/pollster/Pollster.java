@@ -11,14 +11,22 @@ import com.minecraftcitiesnetwork.pollster.config.Settings;
 import com.minecraftcitiesnetwork.pollster.rewards.RewardRunner;
 import com.minecraftcitiesnetwork.pollster.store.LoadReport;
 import com.minecraftcitiesnetwork.pollster.store.SurveyStore;
+import java.time.Clock;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
+import org.incendo.cloud.execution.ExecutionCoordinator;
+import org.incendo.cloud.paper.PaperCommandManager;
+import org.incendo.cloud.paper.util.sender.PaperSimpleSenderMapper;
+import org.incendo.cloud.paper.util.sender.Source;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,6 +44,11 @@ public final class Pollster extends JavaPlugin {
     private @Nullable DefaultSurveyService service;
     private @Nullable RewardRunner rewards;
     private @Nullable PollsterApi api;
+    private @Nullable PluginComponents components;
+    private @Nullable BukkitTask reminderTask;
+
+    /** Reminders check idle sessions once a second. */
+    private static final long REMINDER_PERIOD_TICKS = 20L;
 
     @Override
     public void onEnable() {
@@ -92,9 +105,18 @@ public final class Pollster extends JavaPlugin {
         this.api = new PollsterApiImpl(this.service);
         getServer().getServicesManager().register(PollsterApi.class, this.api, this, ServicePriority.Normal);
 
-        // wired in integration: SessionRegistry, PlayerFlow, FeaturedPicker and the player listeners
-        // wired in integration: AdminUi screens and the ReportScreen opener
-        // wired in integration: Cloud commands (/surveys, /pollster, /pollster reload, report|publish|export)
+        this.components = new PluginComponents(this, getServer(), getLogger(), this.service, this.store,
+                this.rewards, this.settings::get, this.messages::get, this.executorState,
+                getDataFolder().toPath(), this::reload, Clock.systemUTC());
+        getServer().getPluginManager().registerEvents(this.components.joinListener(), this);
+        this.reminderTask = getServer().getScheduler().runTaskTimer(this, this.components.reminderTask(),
+                REMINDER_PERIOD_TICKS, REMINDER_PERIOD_TICKS);
+
+        PaperCommandManager<Source> commands = PaperCommandManager
+                .builder(PaperSimpleSenderMapper.simpleSenderMapper())
+                .executionCoordinator(ExecutionCoordinator.<Source>simpleCoordinator())
+                .buildOnEnable(this);
+        this.components.registerCommands(commands);
         getLogger().info("Pollster enabled");
     }
 
@@ -106,7 +128,19 @@ public final class Pollster extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // Reverse of enable: stop handing out the API, drain executors, then close the pool they use.
+        // Reverse of enable. Cloud's Paper manager registers through the lifecycle API, which has
+        // no unregister; Paper drops a disabled plugin's commands itself.
+        if (this.reminderTask != null) {
+            this.reminderTask.cancel();
+            this.reminderTask = null;
+        }
+        HandlerList.unregisterAll(this);
+        if (this.components != null) {
+            // Dialog buttons still on screen check the session token, so they go stale, not live.
+            this.components.endAllSessions();
+            this.components = null;
+        }
+        // Stop handing out the API, drain executors, then close the pool they use.
         getServer().getServicesManager().unregisterAll(this);
         if (this.executorState != null) {
             this.executorState.shutdown(getLogger());
@@ -124,12 +158,15 @@ public final class Pollster extends JavaPlugin {
         ExecutorState exec = this.executorState;
         SurveyStore surveyStore = this.store;
         DefaultSurveyService surveyService = this.service;
-        if (exec == null || surveyStore == null || surveyService == null) {
+        PluginComponents wired = this.components;
+        if (exec == null || surveyStore == null || surveyService == null || wired == null) {
             return CompletableFuture.failedFuture(new IllegalStateException("Pollster is not enabled."));
         }
         ConfigLoader loader = new ConfigLoader(getDataFolder().toPath(), getClassLoader(), getLogger());
         record Loaded(Settings settings, Messages messages, LoadReport report) {
         }
+        // Captured on the calling (main) thread, before the store or the locks change.
+        Set<String> okBefore = wired.surveysWithLockOk();
         return CompletableFuture.supplyAsync(() -> {
                     try {
                         Settings newSettings = loader.load("settings.yml", Settings.class);
@@ -144,7 +181,11 @@ public final class Pollster extends JavaPlugin {
                     this.messages.set(loaded.messages());
                     return loaded.report();
                 }, exec.mainThread())
-                .thenCompose(report -> surveyService.refreshLocks().thenApply(locks -> report));
+                .thenCompose(report -> surveyService.refreshLocks().thenApply(locks -> {
+                    // Players mid-survey must not submit answers to questions that changed under them.
+                    wired.endSessionsLostOnReload(okBefore);
+                    return report;
+                }));
     }
 
     public @NotNull AtomicReference<Settings> settings() {

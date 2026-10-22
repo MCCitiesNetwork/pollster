@@ -30,12 +30,12 @@ public final class ReminderTask implements Runnable {
     private final Supplier<Settings> settings;
     private final Function<UUID, Optional<Player>> online;
     private final BiConsumer<Player, Component> send;
-    private final Messages messages;
+    private final Supplier<Messages> messages;
 
     public ReminderTask(@NotNull SessionRegistry sessions, @NotNull Clock clock,
                         @NotNull Supplier<Settings> settings,
                         @NotNull Function<UUID, Optional<Player>> online,
-                        @NotNull BiConsumer<Player, Component> send, @NotNull Messages messages) {
+                        @NotNull BiConsumer<Player, Component> send, @NotNull Supplier<Messages> messages) {
         this.sessions = sessions;
         this.clock = clock;
         this.settings = settings;
@@ -64,7 +64,7 @@ public final class ReminderTask implements Runnable {
             if (player.isEmpty()) {
                 continue;
             }
-            this.send.accept(player.get(), this.messages.messageFor(MessageKeys.REMINDER_MESSAGE));
+            this.send.accept(player.get(), this.messages.get().messageFor(MessageKeys.REMINDER_MESSAGE));
             session.lastReminder().set(now);
         }
     }

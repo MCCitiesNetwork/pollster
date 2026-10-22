@@ -60,7 +60,7 @@ class ReminderTaskTest {
                 ConfigLoader.class.getClassLoader(), Logger.getLogger("test")).loadMessages();
         this.task = new ReminderTask(this.sessions, this.clock, () -> this.settings,
                 uuid -> this.online ? Optional.of(this.player) : Optional.empty(),
-                (p, message) -> this.sent.add(message), messages);
+                (p, message) -> this.sent.add(message), () -> messages);
         Question q = new Question("q", QuestionType.YES_NO, "Q", List.of(new Option("yes", "Yes")), true, 0, 0, null);
         SurveyDefinition survey = new SurveyDefinition("rem-one", "N", "", SurveyStatus.OPEN, true, false, false,
                 List.of(), List.of(q));

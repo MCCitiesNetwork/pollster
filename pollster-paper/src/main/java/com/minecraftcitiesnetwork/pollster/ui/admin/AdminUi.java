@@ -7,16 +7,30 @@ import com.minecraftcitiesnetwork.pollster.ui.Style;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Everything the admin screens need, passed explicitly so screens stay static factories.
+ * Messages are read through a supplier so {@code /pollster reload} takes effect immediately.
  *
  * @param endSessions ends every active player session for a survey id (the player flow's
  *                    {@code SessionRegistry.endAllFor})
  * @param preview     starts a preview session of a survey for an admin
  * @param report      opens the report screen for a survey id
  */
-public record AdminUi(@NotNull SurveyService service, @NotNull SurveyStore store, @NotNull Messages messages,
-                      @NotNull Style style, @NotNull Consumer<String> endSessions,
-                      @NotNull PreviewLauncher preview, @NotNull ReportOpener report) {
+public record AdminUi(@NotNull SurveyService service, @NotNull SurveyStore store,
+                      @NotNull Supplier<Messages> messagesSource, @NotNull Style style,
+                      @NotNull Consumer<String> endSessions, @NotNull PreviewLauncher preview,
+                      @NotNull ReportOpener report) {
+
+    /** Fixed messages, for tests. */
+    public AdminUi(@NotNull SurveyService service, @NotNull SurveyStore store, @NotNull Messages messages,
+                   @NotNull Style style, @NotNull Consumer<String> endSessions,
+                   @NotNull PreviewLauncher preview, @NotNull ReportOpener report) {
+        this(service, store, () -> messages, style, endSessions, preview, report);
+    }
+
+    public @NotNull Messages messages() {
+        return this.messagesSource.get();
+    }
 }

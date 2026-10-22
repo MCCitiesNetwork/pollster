@@ -34,10 +34,10 @@ public final class PollsterCommand {
     private final AdminUi ui;
     private final DialogRenderer renderer;
     private final Supplier<CompletableFuture<LoadReport>> reloader;
-    private final Messages messages;
+    private final Supplier<Messages> messages;
 
     public PollsterCommand(@NotNull AdminUi ui, @NotNull DialogRenderer renderer,
-                           @NotNull Supplier<CompletableFuture<LoadReport>> reloader, @NotNull Messages messages) {
+                           @NotNull Supplier<CompletableFuture<LoadReport>> reloader, @NotNull Supplier<Messages> messages) {
         this.ui = ui;
         this.renderer = renderer;
         this.reloader = reloader;
@@ -65,7 +65,7 @@ public final class PollsterCommand {
         var player = ctx.sender().source();
         this.ui.service().responseCounts().whenComplete((counts, error) -> {
             if (error != null) {
-                player.sendMessage(this.messages.messageFor(MessageKeys.EDITOR_SAVE_FAILED,
+                player.sendMessage(this.messages.get().messageFor(MessageKeys.EDITOR_SAVE_FAILED,
                         MessageContainer.value("reason", String.valueOf(error.getMessage()))));
                 return;
             }
@@ -78,14 +78,14 @@ public final class PollsterCommand {
         this.reloader.get().whenComplete((report, error) -> {
             if (error != null) {
                 Throwable cause = error.getCause() != null ? error.getCause() : error;
-                sender.sendMessage(this.messages.messageFor(MessageKeys.EDITOR_RELOAD_ERROR,
+                sender.sendMessage(this.messages.get().messageFor(MessageKeys.EDITOR_RELOAD_ERROR,
                         MessageContainer.value("reason", String.valueOf(cause.getMessage()))));
                 return;
             }
-            sender.sendMessage(this.messages.messageFor(MessageKeys.EDITOR_RELOAD_OK,
+            sender.sendMessage(this.messages.get().messageFor(MessageKeys.EDITOR_RELOAD_OK,
                     MessageContainer.value("count", String.valueOf(report.loaded()))));
             for (Map.Entry<String, String> failure : report.failures().entrySet()) {
-                sender.sendMessage(this.messages.messageFor(MessageKeys.EDITOR_RELOAD_FAILURE,
+                sender.sendMessage(this.messages.get().messageFor(MessageKeys.EDITOR_RELOAD_FAILURE,
                         MessageContainer.value("file", failure.getKey()),
                         MessageContainer.value("reason", failure.getValue())));
             }

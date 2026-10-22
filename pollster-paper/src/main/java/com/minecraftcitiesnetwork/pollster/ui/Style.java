@@ -6,6 +6,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.function.Supplier;
+
 /**
  * Dialog text styles. Each style is a MiniMessage template under {@code ui.style.*} with a
  * {@code <text>} tag, so server owners can recolour dialogs in messages.yml. Text is always
@@ -39,9 +41,15 @@ public final class Style {
         DEFAULTS.setMessage(MessageKeys.UI_LOADING, "Loading...");
     }
 
-    private final MessageContainer messages;
+    // Read through a supplier so /pollster reload recolours dialogs without rebuilding every holder of a Style.
+    private final Supplier<? extends MessageContainer> messages;
 
     public Style(@NotNull MessageContainer messages) {
+        this(() -> messages);
+    }
+
+    /** A style that always renders with the container the supplier currently returns. */
+    public Style(@NotNull Supplier<? extends MessageContainer> messages) {
         this.messages = messages;
     }
 
@@ -86,7 +94,8 @@ public final class Style {
      * styles above, which insert it unparsed, so only the style (not the label) carries markup.
      */
     public @NotNull String word(@NotNull String key) {
-        MessageContainer source = this.messages.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : this.messages;
+        MessageContainer current = this.messages.get();
+        MessageContainer source = current.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : current;
         return PlainTextComponentSerializer.plainText().serialize(source.messageFor(key));
     }
 
@@ -95,7 +104,8 @@ public final class Style {
     }
 
     private @NotNull Component renderWith(@NotNull String key, @NotNull String text, @NotNull Component value) {
-        MessageContainer source = this.messages.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : this.messages;
+        MessageContainer current = this.messages.get();
+        MessageContainer source = current.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : current;
         return source.messageFor(key, MessageContainer.value("text", text), MessageContainer.markup("value", value));
     }
 }
