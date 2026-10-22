@@ -10,7 +10,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 
 /** A paginated list of the answers to one text question. Names show only for non-anonymous surveys. */
 public final class TextAnswersScreen {
@@ -32,7 +36,8 @@ public final class TextAnswersScreen {
                     .button(back).build();
         }
 
-        List<TextAnswer> all = question.texts();
+        boolean showNames = !report.survey().anonymous();
+        List<TextAnswer> all = showNames ? question.texts() : shuffled(report, questionKey, question.texts());
         int pages = Math.max(1, (all.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         int current = Math.max(0, Math.min(page, pages - 1));
         Screen.Builder screen = Screen.builder(style.title("Answers (" + (current + 1) + "/" + pages + ")"));
@@ -40,7 +45,6 @@ public final class TextAnswersScreen {
         if (all.isEmpty()) {
             screen.body(Component.text("No answers yet.", NamedTextColor.GRAY));
         }
-        boolean showNames = !report.survey().anonymous();
         for (int i = current * PAGE_SIZE; i < Math.min(all.size(), (current + 1) * PAGE_SIZE); i++) {
             TextAnswer answer = all.get(i);
             // Component.text keeps player input literal, so tags typed by players never render.
@@ -63,5 +67,17 @@ public final class TextAnswersScreen {
         }
         screen.button(back);
         return screen.columns(2).build();
+    }
+
+    /**
+     * Submission order could be matched against who was online, so anonymous answers are mixed.
+     * The seed depends only on this report, so every page of it sees the same order and paging
+     * never skips or repeats an answer.
+     */
+    private static List<TextAnswer> shuffled(SurveyReport report, String questionKey, List<TextAnswer> texts) {
+        List<TextAnswer> mixed = new ArrayList<>(texts);
+        long seed = Objects.hash(report.survey().id(), questionKey, texts.size(), report.participants());
+        Collections.shuffle(mixed, new Random(seed));
+        return mixed;
     }
 }
