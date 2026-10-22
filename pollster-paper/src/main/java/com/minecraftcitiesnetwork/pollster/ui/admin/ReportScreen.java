@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
+import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
 import com.minecraftcitiesnetwork.pollster.SurveyService;
 import com.minecraftcitiesnetwork.pollster.api.model.Question;
 import com.minecraftcitiesnetwork.pollster.api.model.QuestionType;
@@ -24,6 +25,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.function.BiConsumer;
+
+import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
 
 /**
  * The in-game report for one survey: totals, a bar per option, and buttons to view text answers,
@@ -58,11 +61,11 @@ public final class ReportScreen {
         DialogRenderer renderer = java.util.Objects.requireNonNull(deps.renderer());
         SurveyService service = java.util.Objects.requireNonNull(deps.service());
         return (player, surveyId) -> {
-            renderer.show(player, LoadingScreen.create(deps.style(), "Report"));
+            renderer.show(player, LoadingScreen.create(deps.style(), deps.style().text(REPORT_SCREEN_LOADING_TITLE)));
             service.report(surveyId).whenComplete((report, error) -> {
                 // report() completes on the main thread, where dialogs may be shown.
                 if (error != null || report == null) {
-                    renderer.show(player, ErrorScreen.create(deps.style(), "The report could not be loaded.",
+                    renderer.show(player, ErrorScreen.create(deps.style(), deps.style().text(REPORT_SCREEN_LOAD_FAILED),
                             List.of(), ctx -> ctx.close()));
                 } else {
                     renderer.show(player, create(deps, report));
@@ -74,23 +77,27 @@ public final class ReportScreen {
     public static @NotNull Screen create(@NotNull Deps deps, @NotNull SurveyReport report) {
         Style style = deps.style();
         String surveyId = report.survey().id();
-        Screen.Builder screen = Screen.builder(style.title("Report: " + report.survey().name()));
+        Screen.Builder screen = Screen.builder(style.title(style.text(REPORT_SCREEN_TITLE, MessageContainer.value("name", report.survey().name()))));
 
         String average = report.averageSeconds().isPresent()
-                ? formatSeconds(Math.round(report.averageSeconds().getAsDouble())) : "n/a";
-        screen.body(style.label("Participants", Component.text(report.participants())));
-        screen.body(style.label("Average time", Component.text(average)));
+                ? formatSeconds(style, Math.round(report.averageSeconds().getAsDouble()))
+                : style.text(REPORT_SCREEN_NOT_AVAILABLE);
+        screen.body(style.label(style.text(REPORT_SCREEN_PARTICIPANTS), Component.text(report.participants())));
+        screen.body(style.label(style.text(REPORT_SCREEN_AVERAGE_TIME), Component.text(average)));
 
         for (QuestionReport questionReport : report.questions()) {
             Question question = questionReport.question();
             screen.body(Component.empty());
             screen.body(style.edit(plain(question.text())));
             if (questionReport.shownTo() < report.participants()) {
-                screen.body(Component.text("Shown to " + questionReport.shownTo() + " of "
-                        + report.participants(), NamedTextColor.GRAY));
+                screen.body(Component.text(style.text(REPORT_SCREEN_SHOWN_TO,
+                        MessageContainer.value("shown", String.valueOf(questionReport.shownTo())),
+                        MessageContainer.value("total", String.valueOf(report.participants()))), NamedTextColor.GRAY));
             }
             if (question.type() == QuestionType.TEXT) {
-                screen.body(Component.text(questionReport.texts().size() + " answers", NamedTextColor.GRAY));
+                screen.body(Component.text(style.text(REPORT_SCREEN_ANSWERS_COUNT,
+                        MessageContainer.value("count", String.valueOf(questionReport.texts().size()))),
+                        NamedTextColor.GRAY));
                 continue;
             }
             for (OptionResult option : questionReport.options()) {
@@ -105,25 +112,25 @@ public final class ReportScreen {
         for (QuestionReport questionReport : report.questions()) {
             Question question = questionReport.question();
             if (question.type() == QuestionType.TEXT) {
-                screen.button(new Button(style.edit("View answers"),
+                screen.button(new Button(style.edit(style.text(REPORT_SCREEN_VIEW_ANSWERS)),
                         Component.text(plain(question.text())), Button.DEFAULT_WIDTH,
                         ctx -> ctx.open(TextAnswersScreen.create(deps, report, question.key(), 0))));
             }
         }
-        screen.button(Button.of(style.primary("Publish to web"), ctx -> {
+        screen.button(Button.of(style.primary(style.text(REPORT_SCREEN_PUBLISH)), ctx -> {
             if (deps.publisher() != null) {
                 deps.publisher().publish(ctx.player(), surveyId);
             }
             // Rebuilt so the dialog stays current; the link arrives in chat when the upload ends.
             ctx.open(create(deps, report));
         }));
-        screen.button(Button.of(style.primary("Export JSON"), ctx -> {
+        screen.button(Button.of(style.primary(style.text(REPORT_SCREEN_EXPORT)), ctx -> {
             if (deps.publisher() != null) {
                 deps.publisher().export(ctx.player(), surveyId);
             }
             ctx.open(create(deps, report));
         }));
-        screen.button(Button.of(style.secondary("Back"), ctx -> deps.back().accept(ctx, surveyId)));
+        screen.button(Button.of(style.secondary(style.text(EDITOR_COMMON_BACK)), ctx -> deps.back().accept(ctx, surveyId)));
         return screen.columns(2).build();
     }
 
@@ -139,7 +146,10 @@ public final class ReportScreen {
                 .serialize(MiniMessage.miniMessage().deserialize(miniMessage));
     }
 
-    private static String formatSeconds(long seconds) {
-        return seconds >= 60 ? (seconds / 60) + "m " + (seconds % 60) + "s" : seconds + "s";
+    private static String formatSeconds(Style style, long seconds) {
+        return seconds >= 60
+                ? style.text(REPORT_SCREEN_DURATION_MINUTES, MessageContainer.value("minutes", String.valueOf(seconds / 60)),
+                        MessageContainer.value("seconds", String.valueOf(seconds % 60)))
+                : style.text(REPORT_SCREEN_DURATION_SECONDS, MessageContainer.value("seconds", String.valueOf(seconds)));
     }
 }

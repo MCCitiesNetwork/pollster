@@ -16,6 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.t;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.v;
+
 /** The rewards run after a response is saved. Editable while the survey is a draft or open. */
 public final class RewardsScreen {
 
@@ -31,9 +35,9 @@ public final class RewardsScreen {
 
     public static @NotNull Screen create(@NotNull AdminUi ui, @NotNull SurveyDefinition s) {
         boolean editable = s.status() != SurveyStatus.CLOSED;
-        Screen.Builder b = Screen.builder(ui.style().title("Rewards: " + AdminSupport.truncate(s.name(), 30)));
+        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_REWARDS_TITLE, v("name", AdminSupport.truncate(s.name(), 30)))));
         if (s.rewards().isEmpty()) {
-            b.body(Component.text("No rewards yet.", NamedTextColor.GRAY));
+            b.body(Component.text(t(ui, EDITOR_REWARDS_NONE), NamedTextColor.GRAY));
         }
         List<Reward> rewards = s.rewards();
         for (int i = 0; i < rewards.size(); i++) {
@@ -42,15 +46,15 @@ public final class RewardsScreen {
             b.body(Component.text((i + 1) + ". [" + typeOf(rewards.get(i)) + "] " + summary(rewards.get(i)),
                     NamedTextColor.GRAY));
             if (editable) {
-                b.button(AdminSupport.wide(ui.style().danger("Remove " + (i + 1)), ctx -> remove(ui, ctx, s.id(), index)));
+                b.button(AdminSupport.wide(ui.style().danger(t(ui, EDITOR_REWARDS_REMOVE, v("number", i + 1))), ctx -> remove(ui, ctx, s.id(), index)));
             }
         }
         if (editable) {
-            b.button(AdminSupport.wide(ui.style().primary("Add reward"), ctx -> ctx.open(add(ui, s))));
+            b.button(AdminSupport.wide(ui.style().primary(t(ui, EDITOR_REWARDS_ADD)), ctx -> ctx.open(add(ui, s))));
         } else {
-            b.body(Component.text("The survey is closed, so rewards can no longer change.", NamedTextColor.GRAY));
+            b.body(Component.text(t(ui, EDITOR_REWARDS_CLOSED_NOTE), NamedTextColor.GRAY));
         }
-        b.button(AdminSupport.wide(ui.style().secondary("Back"), ctx -> HubScreen.open(ui, ctx, s.id())));
+        b.button(AdminSupport.wide(ui.style().secondary(t(ui, EDITOR_COMMON_BACK)), ctx -> HubScreen.open(ui, ctx, s.id())));
         return b.build();
     }
 
@@ -59,23 +63,22 @@ public final class RewardsScreen {
     }
 
     private static Screen add(AdminUi ui, SurveyDefinition s, @Nullable Component error) {
-        Screen.Builder b = Screen.builder(ui.style().title("Add reward"));
-        b.body(Component.text("Commands may use {player}. For a title, write \"title | subtitle\".",
-                NamedTextColor.GRAY));
+        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_REWARDS_ADD)));
+        b.body(Component.text(t(ui, EDITOR_REWARDS_HINT), NamedTextColor.GRAY));
         if (error != null) {
             b.body(error);
         }
-        return b.input(new Input.ChoiceInput("type", Component.text("Type"), List.of(
-                        Map.entry(COMMAND, Component.text("Console command")),
-                        Map.entry(PLAYER_COMMAND, Component.text("Player command")),
-                        Map.entry(MESSAGE, Component.text("Message to the player")),
-                        Map.entry(TITLE, Component.text("Title to the player")),
-                        Map.entry(BROADCAST, Component.text("Broadcast to everyone"))), COMMAND))
-                .input(new Input.TextInput("value", Component.text("Value"), "", VALUE_MAX, false))
-                .button(Button.of(ui.style().primary("Add"), ctx -> {
+        return b.input(new Input.ChoiceInput("type", Component.text(t(ui, EDITOR_LABEL_TYPE)), List.of(
+                        Map.entry(COMMAND, Component.text(t(ui, EDITOR_REWARDS_TYPE_COMMAND))),
+                        Map.entry(PLAYER_COMMAND, Component.text(t(ui, EDITOR_REWARDS_TYPE_PLAYER_COMMAND))),
+                        Map.entry(MESSAGE, Component.text(t(ui, EDITOR_REWARDS_TYPE_MESSAGE))),
+                        Map.entry(TITLE, Component.text(t(ui, EDITOR_REWARDS_TYPE_TITLE))),
+                        Map.entry(BROADCAST, Component.text(t(ui, EDITOR_REWARDS_TYPE_BROADCAST)))), COMMAND))
+                .input(new Input.TextInput("value", Component.text(t(ui, EDITOR_REWARDS_VALUE_INPUT)), "", VALUE_MAX, false))
+                .button(Button.of(ui.style().primary(t(ui, EDITOR_REWARDS_ADD_SUBMIT)), ctx -> {
                     String value = ctx.text("value") == null ? "" : ctx.text("value").strip();
                     if (value.isEmpty()) {
-                        ctx.open(add(ui, s, ui.style().error("Type a value.")));
+                        ctx.open(add(ui, s, ui.style().error(t(ui, EDITOR_REWARDS_VALUE_REQUIRED))));
                         return;
                     }
                     Reward reward = build(ctx.text("type"), value);
@@ -85,7 +88,7 @@ public final class RewardsScreen {
                         return current.withRewards(rewards);
                     }, failure -> ctx.open(add(ui, s, ui.style().error(HubScreen.reason(failure)))));
                 }))
-                .button(Button.of(ui.style().secondary("Cancel"), ctx -> ctx.open(create(ui, s))))
+                .button(Button.of(ui.style().secondary(ui.style().word(UI_BUTTON_CANCEL)), ctx -> ctx.open(create(ui, s))))
                 .columns(2)
                 .build();
     }
@@ -124,8 +127,8 @@ public final class RewardsScreen {
             return;
         }
         if (current.get().status() == SurveyStatus.CLOSED) {
-            ctx.open(AdminSupport.notice(ui, "Rewards",
-                    ui.messages().messageFor("editor.read-only"), c -> openFresh(ui, c, id)));
+            ctx.open(AdminSupport.notice(ui, t(ui, EDITOR_LABEL_REWARDS),
+                    ui.messages().messageFor(EDITOR_READ_ONLY), c -> openFresh(ui, c, id)));
             return;
         }
         ctx.open(AdminSupport.loading(ui));

@@ -3,6 +3,7 @@ package com.minecraftcitiesnetwork.pollster.ui;
 import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
 import com.minecraftcitiesnetwork.pollster.config.MessageKeys;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.jetbrains.annotations.NotNull;
 
@@ -97,6 +98,15 @@ public final class Style {
         MessageContainer current = this.messages.get();
         MessageContainer source = current.miniMessageFormattedFor(key).equals(key) ? DEFAULTS : current;
         return PlainTextComponentSerializer.plainText().serialize(source.messageFor(key));
+    }
+
+    /**
+     * A message from messages.yml as plain text, for labels and titles that are then fed through
+     * the styles above. Placeholders go in with {@link MessageContainer#value(String, String)} so
+     * survey names and player input stay literal.
+     */
+    public @NotNull String text(@NotNull String key, @NotNull TagResolver... placeholders) {
+        return this.messages.get().plaintextMessageFor(key, placeholders);
     }
 
     private @NotNull Component render(@NotNull String key, @NotNull String text) {

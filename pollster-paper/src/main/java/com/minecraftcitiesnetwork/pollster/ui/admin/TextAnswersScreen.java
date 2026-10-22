@@ -1,5 +1,6 @@
 package com.minecraftcitiesnetwork.pollster.ui.admin;
 
+import com.minecraftcitiesnetwork.pluginInfrastructure.configurate.MessageContainer;
 import com.minecraftcitiesnetwork.pollster.api.report.QuestionReport;
 import com.minecraftcitiesnetwork.pollster.api.report.SurveyReport;
 import com.minecraftcitiesnetwork.pollster.api.report.TextAnswer;
@@ -11,6 +12,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+
+import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
 
 /** A paginated list of the answers to one text question. Names show only for non-anonymous surveys. */
 public final class TextAnswersScreen {
@@ -25,20 +28,22 @@ public final class TextAnswersScreen {
         Style style = deps.style();
         QuestionReport question = report.questions().stream()
                 .filter(q -> q.question().key().equals(questionKey)).findFirst().orElse(null);
-        Button back = Button.of(style.secondary("Back"), ctx -> ctx.open(ReportScreen.create(deps, report)));
+        Button back = Button.of(style.secondary(style.text(EDITOR_COMMON_BACK)), ctx -> ctx.open(ReportScreen.create(deps, report)));
         if (question == null) {
-            return Screen.builder(style.title("Answers"))
-                    .body(Component.text("This question no longer exists.", NamedTextColor.GRAY))
+            return Screen.builder(style.title(style.text(REPORT_ANSWERS_TITLE)))
+                    .body(Component.text(style.text(REPORT_ANSWERS_MISSING_QUESTION), NamedTextColor.GRAY))
                     .button(back).build();
         }
 
         List<TextAnswer> all = question.texts();
         int pages = Math.max(1, (all.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         int current = Math.max(0, Math.min(page, pages - 1));
-        Screen.Builder screen = Screen.builder(style.title("Answers (" + (current + 1) + "/" + pages + ")"));
+        Screen.Builder screen = Screen.builder(style.title(style.text(REPORT_ANSWERS_TITLE_PAGED,
+                MessageContainer.value("page", String.valueOf(current + 1)),
+                MessageContainer.value("pages", String.valueOf(pages)))));
         screen.body(style.edit(ReportScreen.plain(question.question().text())));
         if (all.isEmpty()) {
-            screen.body(Component.text("No answers yet.", NamedTextColor.GRAY));
+            screen.body(Component.text(style.text(REPORT_ANSWERS_NONE), NamedTextColor.GRAY));
         }
         boolean showNames = !report.survey().anonymous();
         for (int i = current * PAGE_SIZE; i < Math.min(all.size(), (current + 1) * PAGE_SIZE); i++) {
@@ -47,18 +52,19 @@ public final class TextAnswersScreen {
             Component line = Component.text("• ", NamedTextColor.GRAY)
                     .append(Component.text(answer.text(), NamedTextColor.WHITE));
             if (showNames && answer.playerName() != null) {
-                line = line.append(Component.text(" - " + answer.playerName(), NamedTextColor.GRAY));
+                line = line.append(Component.text(style.text(REPORT_ANSWERS_BY,
+                        MessageContainer.value("name", answer.playerName())), NamedTextColor.GRAY));
             }
             screen.body(line);
         }
         if (current > 0) {
             int previous = current - 1;
-            screen.button(Button.of(style.secondary("Previous"),
+            screen.button(Button.of(style.secondary(style.text(REPORT_ANSWERS_PREVIOUS)),
                     ctx -> ctx.open(create(deps, report, questionKey, previous))));
         }
         if (current < pages - 1) {
             int next = current + 1;
-            screen.button(Button.of(style.secondary("Next"),
+            screen.button(Button.of(style.secondary(style.text(EDITOR_COMMON_NEXT)),
                     ctx -> ctx.open(create(deps, report, questionKey, next))));
         }
         screen.button(back);

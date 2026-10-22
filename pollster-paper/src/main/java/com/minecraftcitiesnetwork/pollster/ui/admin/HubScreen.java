@@ -19,6 +19,10 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.t;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.v;
+
 /** One survey's settings and actions, each button showing its current value. */
 public final class HubScreen {
 
@@ -53,46 +57,44 @@ public final class HubScreen {
                                          int responses) {
         String id = s.id();
         boolean draft = s.status() == SurveyStatus.DRAFT;
-        Screen.Builder b = Screen.builder(ui.style().title("Survey: " + AdminSupport.truncate(s.name(), 40)));
-        b.body(ui.style().label("Id", Component.text(id)));
-        b.body(ui.style().label("Status", Component.text(s.status().name())));
-        b.body(ui.style().label("Responses", Component.text(responses)));
-        b.body(ui.style().label("Questions", Component.text(s.questions().size())));
-        b.body(ui.style().label("Anonymous", Component.text(yesNo(s.anonymous()))));
-        b.body(ui.style().label("Featured", Component.text(yesNo(s.featured()))));
-        b.body(ui.style().label("Requires permission", Component.text(yesNo(s.requiresPermission()))));
-        b.body(ui.style().label("Rewards", Component.text(s.rewards().size())));
+        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_HUB_TITLE, v("name", AdminSupport.truncate(s.name(), 40)))));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_ID), Component.text(id)));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_STATUS), Component.text(s.status().name())));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_RESPONSES), Component.text(responses)));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_QUESTIONS), Component.text(s.questions().size())));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_ANONYMOUS), Component.text(yesNo(ui, s.anonymous()))));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_FEATURED), Component.text(yesNo(ui, s.featured()))));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_REQUIRES_PERMISSION), Component.text(yesNo(ui, s.requiresPermission()))));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_REWARDS), Component.text(s.rewards().size())));
         if (!draft && lock != SurveyLock.OK) {
-            b.body(Component.text("[LOCKED] The questions in the file no longer match what was opened, "
-                    + "so players cannot take this survey. Restore the file or duplicate the survey.",
-                    NamedTextColor.RED));
+            b.body(Component.text(t(ui, EDITOR_HUB_LOCKED_WARNING), NamedTextColor.RED));
         }
 
-        b.button(Button.of(AdminSupport.valued(ui, "Name", s.name()), ctx -> editName(ui, ctx, id)));
-        b.button(Button.of(AdminSupport.valued(ui, "Description", s.description()),
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_NAME), s.name()), ctx -> editName(ui, ctx, id)));
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_DESCRIPTION), s.description()),
                 ctx -> editDescription(ui, ctx, id)));
-        b.button(Button.of(AdminSupport.valued(ui, "Questions", "(" + s.questions().size() + ")"),
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_QUESTIONS), "(" + s.questions().size() + ")"),
                 ctx -> current(ui, ctx, id, fresh -> ctx.open(QuestionListScreen.create(ui, fresh)))));
-        b.button(Button.of(AdminSupport.valued(ui, "Rewards", "(" + s.rewards().size() + ")"),
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_REWARDS), "(" + s.rewards().size() + ")"),
                 ctx -> current(ui, ctx, id, fresh -> ctx.open(RewardsScreen.create(ui, fresh)))));
-        b.button(Button.of(AdminSupport.valued(ui, "Anonymous", yesNo(s.anonymous())), ctx -> toggle(ui, ctx, id,
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_ANONYMOUS), yesNo(ui, s.anonymous())), ctx -> toggle(ui, ctx, id,
                 true, fresh -> copy(fresh, fresh.name(), fresh.description(), !fresh.anonymous(),
                         fresh.featured(), fresh.requiresPermission()))));
-        b.button(Button.of(AdminSupport.valued(ui, "Featured", yesNo(s.featured())), ctx -> toggle(ui, ctx, id,
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_FEATURED), yesNo(ui, s.featured())), ctx -> toggle(ui, ctx, id,
                 false, fresh -> copy(fresh, fresh.name(), fresh.description(), fresh.anonymous(),
                         !fresh.featured(), fresh.requiresPermission()))));
-        b.button(Button.of(AdminSupport.valued(ui, "Requires permission", yesNo(s.requiresPermission())),
+        b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_REQUIRES_PERMISSION), yesNo(ui, s.requiresPermission())),
                 ctx -> toggle(ui, ctx, id, false, fresh -> copy(fresh, fresh.name(), fresh.description(),
                         fresh.anonymous(), fresh.featured(), !fresh.requiresPermission()))));
-        b.button(Button.of(ui.style().edit("Preview"), ctx -> preview(ui, ctx, id)));
-        b.button(Button.of(ui.style().edit("Report"), ctx -> ui.report().open(ctx.player(), id)));
+        b.button(Button.of(ui.style().edit(t(ui, EDITOR_HUB_PREVIEW)), ctx -> preview(ui, ctx, id)));
+        b.button(Button.of(ui.style().edit(t(ui, EDITOR_HUB_REPORT)), ctx -> ui.report().open(ctx.player(), id)));
         b.button(switch (s.status()) {
-            case DRAFT -> Button.of(ui.style().primary("Open survey"), ctx -> openSurvey(ui, ctx, id));
-            case OPEN -> Button.of(ui.style().danger("Close survey"), ctx -> closeSurvey(ui, ctx, id));
-            case CLOSED -> Button.of(ui.style().primary("Reopen"), ctx -> reopenSurvey(ui, ctx, id));
+            case DRAFT -> Button.of(ui.style().primary(t(ui, EDITOR_HUB_OPEN)), ctx -> openSurvey(ui, ctx, id));
+            case OPEN -> Button.of(ui.style().danger(t(ui, EDITOR_HUB_CLOSE)), ctx -> closeSurvey(ui, ctx, id));
+            case CLOSED -> Button.of(ui.style().primary(t(ui, EDITOR_HUB_REOPEN)), ctx -> reopenSurvey(ui, ctx, id));
         });
-        b.button(Button.of(ui.style().edit("Duplicate"), ctx -> ctx.open(duplicate(ui, id, null))));
-        b.button(Button.of(ui.style().danger("Delete"), ctx -> deleteFlow(ui, ctx, id, responses)));
+        b.button(Button.of(ui.style().edit(t(ui, EDITOR_HUB_DUPLICATE)), ctx -> ctx.open(duplicate(ui, id, null))));
+        b.button(Button.of(ui.style().danger(t(ui, EDITOR_HUB_DELETE)), ctx -> deleteFlow(ui, ctx, id, responses)));
         b.button(AdminListScreen.back(ui));
         return b.columns(2).build();
     }
@@ -110,7 +112,7 @@ public final class HubScreen {
             boolean blocked = draftOnly ? fresh.status() != SurveyStatus.DRAFT : fresh.status() == SurveyStatus.CLOSED;
             if (blocked) {
                 String key = draftOnly ? MessageKeys.EDITOR_ANONYMOUS_LOCKED : MessageKeys.EDITOR_READ_ONLY;
-                ctx.open(AdminSupport.notice(ui, "Survey", ui.messages().messageFor(key), c -> open(ui, c, id)));
+                ctx.open(AdminSupport.notice(ui, t(ui, EDITOR_COMMON_SURVEY), ui.messages().messageFor(key), c -> open(ui, c, id)));
                 return;
             }
             save(ui, ctx, id, change.apply(fresh), error ->
@@ -134,11 +136,11 @@ public final class HubScreen {
     private static void editName(AdminUi ui, ScreenContext ctx, String id) {
         current(ui, ctx, id, fresh -> {
             if (fresh.status() == SurveyStatus.CLOSED) {
-                ctx.open(AdminSupport.notice(ui, "Survey", ui.messages().messageFor(MessageKeys.EDITOR_READ_ONLY),
+                ctx.open(AdminSupport.notice(ui, t(ui, EDITOR_COMMON_SURVEY), ui.messages().messageFor(MessageKeys.EDITOR_READ_ONLY),
                         c -> open(ui, c, id)));
                 return;
             }
-            ctx.open(textEdit(ui, id, "Name", fresh.name(), false, NAME_MAX, null, true,
+            ctx.open(textEdit(ui, id, t(ui, EDITOR_LABEL_NAME), fresh.name(), false, NAME_MAX, null, true,
                     value -> copy(fresh, value, fresh.description(), fresh.anonymous(), fresh.featured(),
                             fresh.requiresPermission())));
         });
@@ -147,11 +149,11 @@ public final class HubScreen {
     private static void editDescription(AdminUi ui, ScreenContext ctx, String id) {
         current(ui, ctx, id, fresh -> {
             if (fresh.status() == SurveyStatus.CLOSED) {
-                ctx.open(AdminSupport.notice(ui, "Survey", ui.messages().messageFor(MessageKeys.EDITOR_READ_ONLY),
+                ctx.open(AdminSupport.notice(ui, t(ui, EDITOR_COMMON_SURVEY), ui.messages().messageFor(MessageKeys.EDITOR_READ_ONLY),
                         c -> open(ui, c, id)));
                 return;
             }
-            ctx.open(textEdit(ui, id, "Description", fresh.description(), true, DESCRIPTION_MAX, null, false,
+            ctx.open(textEdit(ui, id, t(ui, EDITOR_LABEL_DESCRIPTION), fresh.description(), true, DESCRIPTION_MAX, null, false,
                     value -> copy(fresh, fresh.name(), value, fresh.anonymous(), fresh.featured(),
                             fresh.requiresPermission())));
         });
@@ -161,29 +163,29 @@ public final class HubScreen {
     private static Screen textEdit(AdminUi ui, String id, String field, String initial, boolean multiline, int max,
                                    @Nullable Component error, boolean required,
                                    Function<String, SurveyDefinition> apply) {
-        Screen.Builder b = Screen.builder(ui.style().title("Edit " + field.toLowerCase()));
+        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_HUB_EDIT_TITLE, v("field", field.toLowerCase()))));
         if (error != null) {
             b.body(error);
         }
         return b.input(new Input.TextInput("value", Component.text(field), initial, max, multiline))
-                .button(Button.of(ui.style().primary("Save"), ctx -> {
+                .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_SAVE)), ctx -> {
                     String value = ctx.text("value") == null ? "" : ctx.text("value").strip();
                     if (required && value.isEmpty()) {
                         ctx.open(textEdit(ui, id, field, initial, multiline, max,
-                                ui.style().error(field + " cannot be empty."), required, apply));
+                                ui.style().error(t(ui, EDITOR_HUB_FIELD_EMPTY, v("field", field))), required, apply));
                         return;
                     }
                     save(ui, ctx, id, apply.apply(value), problem -> ctx.open(textEdit(ui, id, field, value,
                             multiline, max, ui.style().error(reason(problem)), required, apply)));
                 }))
-                .button(Button.of(ui.style().secondary("Cancel"), ctx -> open(ui, ctx, id)))
+                .button(Button.of(ui.style().secondary(ui.style().word(UI_BUTTON_CANCEL)), ctx -> open(ui, ctx, id)))
                 .columns(2)
                 .build();
     }
 
     private static void preview(AdminUi ui, ScreenContext ctx, String id) {
         current(ui, ctx, id, fresh -> {
-            var problems = AdminSupport.problems(fresh);
+            var problems = AdminSupport.problems(ui, fresh);
             if (!problems.isEmpty()) {
                 ctx.open(AdminSupport.problemsScreen(ui, problems, c -> open(ui, c, id)));
                 return;
@@ -194,12 +196,12 @@ public final class HubScreen {
 
     private static void openSurvey(AdminUi ui, ScreenContext ctx, String id) {
         current(ui, ctx, id, fresh -> {
-            var problems = AdminSupport.problems(fresh);
+            var problems = AdminSupport.problems(ui, fresh);
             if (!problems.isEmpty()) {
                 ctx.open(AdminSupport.problemsScreen(ui, problems, c -> open(ui, c, id)));
                 return;
             }
-            ctx.open(ConfirmScreen.create(ui.style(), "Open survey?",
+            ctx.open(ConfirmScreen.create(ui.style(), t(ui, EDITOR_HUB_OPEN_TITLE),
                     ui.messages().messageFor(MessageKeys.EDITOR_OPEN_WARNING), c -> {
                         c.open(AdminSupport.loading(ui));
                         ui.service().open(id).whenComplete((result, error) -> {
@@ -238,23 +240,23 @@ public final class HubScreen {
     }
 
     private static Screen duplicate(AdminUi ui, String sourceId, @Nullable Component error) {
-        Screen.Builder b = Screen.builder(ui.style().title("Duplicate survey"));
-        b.body(Component.text("The copy is a draft with the same questions and rewards.", NamedTextColor.GRAY));
+        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_HUB_DUPLICATE_TITLE)));
+        b.body(Component.text(t(ui, EDITOR_HUB_DUPLICATE_HINT), NamedTextColor.GRAY));
         if (error != null) {
             b.body(error);
         }
-        return b.input(new Input.TextInput("id", Component.text("New id (a-z, 0-9, -)"), "",
+        return b.input(new Input.TextInput("id", Component.text(t(ui, EDITOR_COMMON_NEW_ID)), "",
                         SurveyIds.MAX_LENGTH, false))
-                .button(Button.of(ui.style().primary("Create"), ctx -> {
+                .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_CREATE)), ctx -> {
                     String newId = ctx.text("id") == null ? "" : ctx.text("id").strip();
                     if (!SurveyIds.isValidSlug(newId)) {
                         ctx.open(duplicate(ui, sourceId, ui.style()
-                                .error("Survey id must be 3 to 48 characters of a-z, 0-9 and '-'.")));
+                                .error(t(ui, EDITOR_COMMON_ID_INVALID))));
                         return;
                     }
                     if (ui.store().exists(newId)) {
                         ctx.open(duplicate(ui, sourceId,
-                                ui.style().error("A survey with the id " + newId + " already exists.")));
+                                ui.style().error(t(ui, EDITOR_COMMON_ID_EXISTS, v("id", newId)))));
                         return;
                     }
                     ctx.open(AdminSupport.loading(ui));
@@ -266,7 +268,7 @@ public final class HubScreen {
                         show(ui, ctx, newId);
                     });
                 }))
-                .button(Button.of(ui.style().secondary("Cancel"), ctx -> open(ui, ctx, sourceId)))
+                .button(Button.of(ui.style().secondary(ui.style().word(UI_BUTTON_CANCEL)), ctx -> open(ui, ctx, sourceId)))
                 .columns(2)
                 .build();
     }
@@ -284,16 +286,18 @@ public final class HubScreen {
                 AdminListScreen.open(ui, c);
             });
         };
-        Component first = Component.text("Delete " + id + "? This removes the survey file"
-                + (responses > 0 ? " and its " + responses + " responses." : "."), NamedTextColor.GRAY);
+        Component first = Component.text(responses > 0
+                ? t(ui, EDITOR_HUB_DELETE_BODY_RESPONSES, v("id", id), v("count", responses))
+                : t(ui, EDITOR_HUB_DELETE_BODY, v("id", id)), NamedTextColor.GRAY);
         if (responses == 0) {
-            ctx.open(ConfirmScreen.create(ui.style(), "Delete survey?", first, delete, cancel));
+            ctx.open(ConfirmScreen.create(ui.style(), t(ui, EDITOR_HUB_DELETE_TITLE), first, delete, cancel));
             return;
         }
-        Component second = Component.text("Really delete " + id + "? Its " + responses
-                + " responses will be deleted from the database and cannot be recovered.", NamedTextColor.RED);
-        ctx.open(ConfirmScreen.create(ui.style(), "Delete survey?", first,
-                c -> c.open(ConfirmScreen.create(ui.style(), "Really delete?", second, delete, cancel)), cancel));
+        Component second = Component.text(t(ui, EDITOR_HUB_REALLY_BODY, v("id", id), v("count", responses)),
+                NamedTextColor.RED);
+        ctx.open(ConfirmScreen.create(ui.style(), t(ui, EDITOR_HUB_DELETE_TITLE), first,
+                c -> c.open(ConfirmScreen.create(ui.style(), t(ui, EDITOR_HUB_REALLY_TITLE), second, delete, cancel)),
+                cancel));
     }
 
     // --- helpers ---------------------------------------------------------------------------
@@ -309,7 +313,7 @@ public final class HubScreen {
                 requiresPermission, s.rewards(), s.questions());
     }
 
-    private static String yesNo(boolean value) {
-        return value ? "yes" : "no";
+    private static String yesNo(AdminUi ui, boolean value) {
+        return t(ui, value ? EDITOR_COMMON_ANSWER_YES : EDITOR_COMMON_ANSWER_NO);
     }
 }

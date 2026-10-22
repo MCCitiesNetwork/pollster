@@ -23,6 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.t;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.v;
+
 /**
  * Edits one question. The form is held in memory until Save: a question that is not valid yet (a
  * choice question with no options) cannot be written to the file, so the option screens work on the
@@ -54,56 +58,60 @@ public final class QuestionEditScreen {
         if (s.status() != SurveyStatus.DRAFT) {
             return readOnly(ui, s, q);
         }
-        Screen.Builder b = Screen.builder(ui.style().title("Question: " + AdminSupport.truncate(q.key(), 30)));
+        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_QUESTION_TITLE, v("key", AdminSupport.truncate(q.key(), 30)))));
         if (error != null) {
             b.body(error);
         }
-        b.input(new Input.TextInput("key", Component.text("Key (a-z, 0-9, -)"), q.key(), KEY_MAX, false));
-        b.input(new Input.TextInput("text", Component.text("Question text"), q.text(), TEXT_MAX, false));
-        b.input(new Input.ChoiceInput("type", Component.text("Type"), typeOptions(), q.type().name()));
-        b.input(new Input.BoolInput("required", Component.text("Required"), q.required()));
+        b.input(new Input.TextInput("key", Component.text(t(ui, EDITOR_QUESTION_KEY_INPUT)), q.key(), KEY_MAX, false));
+        b.input(new Input.TextInput("text", Component.text(t(ui, EDITOR_QUESTION_TEXT_INPUT)), q.text(), TEXT_MAX, false));
+        b.input(new Input.ChoiceInput("type", Component.text(t(ui, EDITOR_LABEL_TYPE)), typeOptions(), q.type().name()));
+        b.input(new Input.BoolInput("required", Component.text(t(ui, EDITOR_LABEL_REQUIRED)), q.required()));
         int count = q.options().size();
         if (q.type() == QuestionType.MULTIPLE && count > 0) {
-            b.input(new Input.RangeInput("min", Component.text("Minimum selections"), 0, count, 1,
+            b.input(new Input.RangeInput("min", Component.text(t(ui, EDITOR_QUESTION_MIN_INPUT)), 0, count, 1,
                     Math.min(q.min(), count)));
-            b.input(new Input.RangeInput("max", Component.text("Maximum selections"), 0, count, 1,
+            b.input(new Input.RangeInput("max", Component.text(t(ui, EDITOR_QUESTION_MAX_INPUT)), 0, count, 1,
                     q.effectiveMax()));
         }
-        b.input(new Input.TextInput("condition", Component.text("Show only if (condition)"),
+        b.input(new Input.TextInput("condition", Component.text(t(ui, EDITOR_QUESTION_CONDITION_INPUT)),
                 q.showIf() == null ? "" : q.showIf(), CONDITION_MAX, false));
 
         if (q.type() == QuestionType.SINGLE || q.type() == QuestionType.MULTIPLE) {
-            b.button(Button.of(AdminSupport.valued(ui, "Options", "(" + count + ")"),
+            b.button(Button.of(AdminSupport.valued(ui, t(ui, EDITOR_LABEL_OPTIONS), "(" + count + ")"),
                     ctx -> openOptions(ui, ctx, s, originalKey, q)));
         }
-        b.button(Button.of(ui.style().primary("Save"), ctx -> save(ui, ctx, s, originalKey, q)));
+        b.button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_SAVE)), ctx -> save(ui, ctx, s, originalKey, q)));
         if (originalKey != null) {
-            b.button(Button.of(ui.style().edit("Move ▲"), ctx -> move(ui, ctx, s, originalKey, -1)));
-            b.button(Button.of(ui.style().edit("Move ▼"), ctx -> move(ui, ctx, s, originalKey, 1)));
-            b.button(Button.of(ui.style().danger("Delete question"), ctx -> ctx.open(ConfirmScreen.create(
-                    ui.style(), "Delete question?",
-                    Component.text("Delete " + originalKey + "?", NamedTextColor.GRAY),
+            b.button(Button.of(ui.style().edit(t(ui, EDITOR_QUESTION_MOVE_UP)), ctx -> move(ui, ctx, s, originalKey, -1)));
+            b.button(Button.of(ui.style().edit(t(ui, EDITOR_QUESTION_MOVE_DOWN)), ctx -> move(ui, ctx, s, originalKey, 1)));
+            b.button(Button.of(ui.style().danger(t(ui, EDITOR_QUESTION_DELETE)), ctx -> ctx.open(ConfirmScreen.create(
+                    ui.style(), t(ui, EDITOR_QUESTION_DELETE_TITLE),
+                    Component.text(t(ui, EDITOR_QUESTION_DELETE_BODY, v("key", originalKey)), NamedTextColor.GRAY),
                     c -> delete(ui, c, s, originalKey, q), c -> c.open(create(ui, s, originalKey, q, null))))));
         }
-        b.button(Button.of(ui.style().secondary("Back"), ctx -> ctx.open(QuestionListScreen.create(ui, s))));
+        b.button(Button.of(ui.style().secondary(t(ui, EDITOR_COMMON_BACK)), ctx -> ctx.open(QuestionListScreen.create(ui, s))));
         return b.columns(2).build();
     }
 
     private static Screen readOnly(AdminUi ui, SurveyDefinition s, Question q) {
-        Screen.Builder b = Screen.builder(ui.style().title("Question: " + AdminSupport.truncate(q.key(), 30)));
-        b.body(Component.text("Questions are locked once a survey has been opened.", NamedTextColor.GRAY));
-        b.body(ui.style().label("Key", Component.text(q.key())));
-        b.body(ui.style().label("Text", Component.text(q.text())));
-        b.body(ui.style().label("Type", Component.text(q.type().name())));
-        b.body(ui.style().label("Required", Component.text(q.required() ? "yes" : "no")));
+        Screen.Builder b = Screen.builder(ui.style().title(t(ui, EDITOR_QUESTION_TITLE, v("key", AdminSupport.truncate(q.key(), 30)))));
+        b.body(Component.text(t(ui, EDITOR_QUESTIONS_LOCKED_NOTE), NamedTextColor.GRAY));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_KEY), Component.text(q.key())));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_TEXT), Component.text(q.text())));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_TYPE), Component.text(q.type().name())));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_REQUIRED),
+                Component.text(t(ui, q.required() ? EDITOR_COMMON_ANSWER_YES : EDITOR_COMMON_ANSWER_NO))));
         if (q.type() == QuestionType.MULTIPLE) {
-            b.body(ui.style().label("Selections", Component.text(q.min() + " to " + q.effectiveMax())));
+            b.body(ui.style().label(t(ui, EDITOR_LABEL_SELECTIONS),
+                    Component.text(t(ui, EDITOR_QUESTION_SELECTION_RANGE, v("min", q.min()), v("max", q.effectiveMax())))));
         }
         for (Option option : q.options()) {
-            b.body(Component.text("• " + option.key() + ": " + option.label(), NamedTextColor.GRAY));
+            b.body(Component.text(t(ui, EDITOR_COMMON_BULLET, v("key", option.key()), v("label", option.label())),
+                    NamedTextColor.GRAY));
         }
-        b.body(ui.style().label("Condition", Component.text(q.showIf() == null ? "none" : q.showIf())));
-        b.button(Button.of(ui.style().secondary("Back"), ctx -> ctx.open(QuestionListScreen.create(ui, s))));
+        b.body(ui.style().label(t(ui, EDITOR_LABEL_CONDITION),
+                Component.text(q.showIf() == null ? t(ui, EDITOR_COMMON_NONE) : q.showIf())));
+        b.button(Button.of(ui.style().secondary(t(ui, EDITOR_COMMON_BACK)), ctx -> ctx.open(QuestionListScreen.create(ui, s))));
         return b.build();
     }
 
@@ -156,7 +164,7 @@ public final class QuestionEditScreen {
             ctx.open(OptionListScreen.create(ui, s, originalKey, pending, null));
         } else {
             ctx.open(create(ui, s, originalKey, pending, ui.style().error(
-                    "Options only apply to single and multiple choice questions. Change the type and save first.")));
+                    t(ui, EDITOR_QUESTION_OPTIONS_NOT_APPLICABLE))));
         }
     }
 
@@ -169,7 +177,7 @@ public final class QuestionEditScreen {
                 ConditionParser.parse(q.showIf());
             } catch (ConditionParseException e) {
                 // The exception text carries the column, which is what lets the admin find the typo.
-                back.accept(ui.style().error("Condition: " + e.getMessage()));
+                back.accept(ui.style().error(t(ui, EDITOR_QUESTION_CONDITION_ERROR, v("reason", e.getMessage()))));
                 return;
             }
         }

@@ -13,6 +13,10 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Map;
 
+import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.t;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.v;
+
 /** The paginated list of surveys: the editor's entry screen. */
 public final class AdminListScreen {
 
@@ -41,9 +45,9 @@ public final class AdminListScreen {
         List<SurveyDefinition> all = ui.service().surveys();
         int pages = Math.max(1, (all.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         int current = Math.max(0, Math.min(page, pages - 1));
-        Screen.Builder builder = Screen.builder(ui.style().title("Surveys"))
-                .body(Component.text(all.size() + " surveys · page " + (current + 1) + "/" + pages,
-                        NamedTextColor.GRAY));
+        Screen.Builder builder = Screen.builder(ui.style().title(t(ui, EDITOR_LIST_TITLE)))
+                .body(Component.text(t(ui, EDITOR_LIST_SUMMARY, v("count", all.size()), v("page", current + 1),
+                        v("pages", pages)), NamedTextColor.GRAY));
 
         int from = current * PAGE_SIZE;
         for (SurveyDefinition survey : all.subList(from, Math.min(all.size(), from + PAGE_SIZE))) {
@@ -56,29 +60,29 @@ public final class AdminListScreen {
             }));
         }
 
-        builder.button(AdminSupport.wide(ui.style().primary("Create survey"),
+        builder.button(AdminSupport.wide(ui.style().primary(t(ui, EDITOR_LIST_CREATE)),
                 ctx -> ctx.open(CreateWizard.basics(ui, CreateWizard.Draft.EMPTY, null))));
         if (current > 0) {
-            builder.button(AdminSupport.wide(ui.style().secondary("Previous page"),
+            builder.button(AdminSupport.wide(ui.style().secondary(t(ui, EDITOR_LIST_PREVIOUS)),
                     ctx -> ctx.open(create(ui, current - 1, counts))));
         }
         if (current < pages - 1) {
-            builder.button(AdminSupport.wide(ui.style().secondary("Next page"),
+            builder.button(AdminSupport.wide(ui.style().secondary(t(ui, EDITOR_LIST_NEXT)),
                     ctx -> ctx.open(create(ui, current + 1, counts))));
         }
-        builder.button(AdminSupport.wide(ui.style().secondary("Close"), ScreenContext::close));
+        builder.button(AdminSupport.wide(ui.style().secondary(t(ui, EDITOR_COMMON_CLOSE)), ScreenContext::close));
         return builder.build();
     }
 
     private static String label(AdminUi ui, SurveyDefinition survey, Map<String, Integer> counts) {
         boolean locked = survey.status() != SurveyStatus.DRAFT
                 && ui.service().lock(survey.id()) != SurveyService.SurveyLock.OK;
-        return survey.id() + " · " + AdminSupport.truncate(survey.name(), 30)
-                + " [" + survey.status() + "]" + (locked ? " [LOCKED]" : "")
-                + " · " + counts.getOrDefault(survey.id(), 0) + " responses";
+        return t(ui, locked ? EDITOR_LIST_ENTRY_LOCKED : EDITOR_LIST_ENTRY, v("id", survey.id()),
+                v("name", AdminSupport.truncate(survey.name(), 30)), v("status", survey.status()),
+                v("responses", counts.getOrDefault(survey.id(), 0)));
     }
 
     static @NotNull Button back(@NotNull AdminUi ui) {
-        return Button.of(ui.style().secondary("Back"), ctx -> open(ui, ctx));
+        return Button.of(ui.style().secondary(t(ui, EDITOR_COMMON_BACK)), ctx -> open(ui, ctx));
     }
 }

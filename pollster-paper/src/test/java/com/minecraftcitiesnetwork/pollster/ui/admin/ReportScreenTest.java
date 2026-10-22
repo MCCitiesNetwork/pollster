@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReportScreenTest {
 
-    private static final ReportScreen.Deps DEPS = new ReportScreen.Deps(Style.defaults(), null, null, null,
+    private static final ReportScreen.Deps DEPS = new ReportScreen.Deps(new Style(BundledMessages.load()), null, null, null,
             (ctx, id) -> { });
 
     private static String plain(Component c) {

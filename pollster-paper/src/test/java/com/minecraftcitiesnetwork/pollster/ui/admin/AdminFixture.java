@@ -36,7 +36,7 @@ final class AdminFixture {
 
     final SurveyStore store;
     final SurveyService service = Mockito.mock(SurveyService.class);
-    final Messages messages = new Messages();
+    final Messages messages = BundledMessages.load();
     final List<String> endedSessions = new ArrayList<>();
     final List<String> previews = new ArrayList<>();
     final List<String> reports = new ArrayList<>();
@@ -57,7 +57,7 @@ final class AdminFixture {
         this.messages.setMessage("editor.anonymous-locked", "Anonymous is draft only.");
         this.messages.setMessage("errors.survey-unavailable", "This survey is no longer available.");
         wireService();
-        this.ui = new AdminUi(this.service, this.store, this.messages, Style.defaults(),
+        this.ui = new AdminUi(this.service, this.store, this.messages, new Style(this.messages),
                 this.endedSessions::add, (p, s) -> this.previews.add(s.id()), (p, id) -> this.reports.add(id));
     }
 

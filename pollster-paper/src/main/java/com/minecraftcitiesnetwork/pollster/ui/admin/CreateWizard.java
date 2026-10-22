@@ -13,6 +13,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
+import static com.minecraftcitiesnetwork.pollster.config.MessageKeys.*;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.t;
+import static com.minecraftcitiesnetwork.pollster.ui.admin.AdminSupport.v;
+
 /** Three steps: basics, settings, confirm. Each step passes a {@link Draft} on; nothing is written until Create. */
 public final class CreateWizard {
 
@@ -28,53 +32,53 @@ public final class CreateWizard {
     }
 
     public static @NotNull Screen basics(@NotNull AdminUi ui, @NotNull Draft draft, @Nullable Component error) {
-        Screen.Builder builder = Screen.builder(ui.style().title("Create survey: basics"));
+        Screen.Builder builder = Screen.builder(ui.style().title(t(ui, EDITOR_WIZARD_BASICS_TITLE)));
         if (error != null) {
             builder.body(error);
         }
         return builder
-                .input(new Input.TextInput("id", Component.text("Id (a-z, 0-9, -)"), draft.id(),
+                .input(new Input.TextInput("id", Component.text(t(ui, EDITOR_WIZARD_ID_INPUT)), draft.id(),
                         SurveyIds.MAX_LENGTH, false))
-                .input(new Input.TextInput("name", Component.text("Name"), draft.name(), NAME_MAX, false))
-                .input(new Input.TextInput("description", Component.text("Description"), draft.description(),
+                .input(new Input.TextInput("name", Component.text(t(ui, EDITOR_LABEL_NAME)), draft.name(), NAME_MAX, false))
+                .input(new Input.TextInput("description", Component.text(t(ui, EDITOR_LABEL_DESCRIPTION)), draft.description(),
                         DESCRIPTION_MAX, true))
-                .button(Button.of(ui.style().primary("Next"), ctx -> {
+                .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_NEXT)), ctx -> {
                     Draft entered = new Draft(trimmed(ctx.text("id")), trimmed(ctx.text("name")),
                             trimmed(ctx.text("description")), draft.anonymous(), draft.featured(),
                             draft.requiresPermission());
                     Component problem = problem(ui, entered);
                     ctx.open(problem == null ? settings(ui, entered) : basics(ui, entered, problem));
                 }))
-                .button(Button.of(ui.style().secondary("Cancel"), ctx -> AdminListScreen.open(ui, ctx)))
+                .button(Button.of(ui.style().secondary(ui.style().word(UI_BUTTON_CANCEL)), ctx -> AdminListScreen.open(ui, ctx)))
                 .columns(2)
                 .build();
     }
 
     public static @NotNull Screen settings(@NotNull AdminUi ui, @NotNull Draft draft) {
-        return Screen.builder(ui.style().title("Create survey: settings"))
-                .input(new Input.BoolInput("anonymous", Component.text("Anonymous (names are not stored)"),
+        return Screen.builder(ui.style().title(t(ui, EDITOR_WIZARD_SETTINGS_TITLE)))
+                .input(new Input.BoolInput("anonymous", Component.text(t(ui, EDITOR_WIZARD_ANONYMOUS_INPUT)),
                         draft.anonymous()))
-                .input(new Input.BoolInput("featured", Component.text("Featured (suggested to players)"),
+                .input(new Input.BoolInput("featured", Component.text(t(ui, EDITOR_WIZARD_FEATURED_INPUT)),
                         draft.featured()))
-                .input(new Input.BoolInput("requires-permission", Component.text("Requires permission"),
+                .input(new Input.BoolInput("requires-permission", Component.text(t(ui, EDITOR_LABEL_REQUIRES_PERMISSION)),
                         draft.requiresPermission()))
-                .button(Button.of(ui.style().primary("Next"), ctx -> ctx.open(confirm(ui, withSettings(draft, ctx)))))
-                .button(Button.of(ui.style().secondary("Back"), ctx -> ctx.open(basics(ui, withSettings(draft, ctx), null))))
+                .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_NEXT)), ctx -> ctx.open(confirm(ui, withSettings(draft, ctx)))))
+                .button(Button.of(ui.style().secondary(t(ui, EDITOR_COMMON_BACK)), ctx -> ctx.open(basics(ui, withSettings(draft, ctx), null))))
                 .columns(2)
                 .build();
     }
 
     public static @NotNull Screen confirm(@NotNull AdminUi ui, @NotNull Draft draft) {
-        return Screen.builder(ui.style().title("Create survey: confirm"))
-                .body(ui.style().label("Id", Component.text(draft.id())))
-                .body(ui.style().label("Name", Component.text(draft.name())))
-                .body(ui.style().label("Description", Component.text(AdminSupport.truncate(draft.description(), 80))))
-                .body(ui.style().label("Anonymous", Component.text(yesNo(draft.anonymous()))))
-                .body(ui.style().label("Featured", Component.text(yesNo(draft.featured()))))
-                .body(ui.style().label("Requires permission", Component.text(yesNo(draft.requiresPermission()))))
-                .button(Button.of(ui.style().primary("Create"), ctx -> create(ui, ctx, draft)))
-                .button(Button.of(ui.style().secondary("Back"), ctx -> ctx.open(settings(ui, draft))))
-                .button(Button.of(ui.style().secondary("Cancel"), ctx -> AdminListScreen.open(ui, ctx)))
+        return Screen.builder(ui.style().title(t(ui, EDITOR_WIZARD_CONFIRM_TITLE)))
+                .body(ui.style().label(t(ui, EDITOR_LABEL_ID), Component.text(draft.id())))
+                .body(ui.style().label(t(ui, EDITOR_LABEL_NAME), Component.text(draft.name())))
+                .body(ui.style().label(t(ui, EDITOR_LABEL_DESCRIPTION), Component.text(AdminSupport.truncate(draft.description(), 80))))
+                .body(ui.style().label(t(ui, EDITOR_LABEL_ANONYMOUS), Component.text(yesNo(ui, draft.anonymous()))))
+                .body(ui.style().label(t(ui, EDITOR_LABEL_FEATURED), Component.text(yesNo(ui, draft.featured()))))
+                .body(ui.style().label(t(ui, EDITOR_LABEL_REQUIRES_PERMISSION), Component.text(yesNo(ui, draft.requiresPermission()))))
+                .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_CREATE)), ctx -> create(ui, ctx, draft)))
+                .button(Button.of(ui.style().secondary(t(ui, EDITOR_COMMON_BACK)), ctx -> ctx.open(settings(ui, draft))))
+                .button(Button.of(ui.style().secondary(ui.style().word(UI_BUTTON_CANCEL)), ctx -> AdminListScreen.open(ui, ctx)))
                 .columns(3)
                 .build();
     }
@@ -101,13 +105,13 @@ public final class CreateWizard {
 
     private static @Nullable Component problem(AdminUi ui, Draft draft) {
         if (!SurveyIds.isValidSlug(draft.id())) {
-            return ui.style().error("Survey id must be 3 to 48 characters of a-z, 0-9 and '-'.");
+            return ui.style().error(t(ui, EDITOR_COMMON_ID_INVALID));
         }
         if (ui.store().exists(draft.id())) {
-            return ui.style().error("A survey with the id " + draft.id() + " already exists.");
+            return ui.style().error(t(ui, EDITOR_COMMON_ID_EXISTS, v("id", draft.id())));
         }
         if (draft.name().isEmpty()) {
-            return ui.style().error("Give the survey a name.");
+            return ui.style().error(t(ui, EDITOR_WIZARD_NAME_REQUIRED));
         }
         return null;
     }
@@ -122,7 +126,7 @@ public final class CreateWizard {
         return s == null ? "" : s.strip();
     }
 
-    private static String yesNo(boolean value) {
-        return value ? "yes" : "no";
+    private static String yesNo(AdminUi ui, boolean value) {
+        return t(ui, value ? EDITOR_COMMON_ANSWER_YES : EDITOR_COMMON_ANSWER_NO);
     }
 }
