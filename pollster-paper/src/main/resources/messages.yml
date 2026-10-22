@@ -79,3 +79,20 @@ survey:
 
 reminder:
   message: "<prefix><yellow>You have an unfinished survey. <click:run_command:'/surveys resume'><hover:show_text:'<gray>Continue your survey'><green><underlined>Click to continue</underlined></green></hover></click>"
+
+# The in-game survey editor (/pollster). <args> is a comma separated list of question keys or
+# similar; <reason> is the text of a problem; <count> and <file> are numbers and names.
+editor:
+  open-warning: '<yellow>Opening this survey locks its questions: text, type, options, order, limits and conditions can no longer change. To change them later, duplicate the survey.'
+  locked: '<red>Questions cannot change once a survey has been opened. Duplicate the survey to edit them.'
+  read-only: '<gray>This setting can no longer be changed because the survey is closed.'
+  anonymous-locked: '<gray>Anonymous can only be changed while the survey is a draft.'
+  move-breaks-condition: '<red>Cannot move: a condition would then use an answer that comes later (<args>).'
+  key-referenced: '<red>Cannot rename: a condition of <args> uses this key.'
+  remove-referenced: '<red>Cannot delete: a condition of <args> refers to this question.'
+  duplicate-key: '<red>A question with the key <args> already exists.'
+  unknown-question: '<red>There is no question with the key <args>.'
+  save-failed: '<red>Could not save: <reason>'
+  reload-ok: '<prefix><green>Reloaded <count> surveys.'
+  reload-failure: '<prefix><red><file>: <reason>'
+  reload-error: '<prefix><red>Reload failed: <reason>'
