@@ -1,0 +1,25 @@
+name: Pollster
+version: "${version}"
+main: com.minecraftcitiesnetwork.pollster.Pollster
+api-version: "26.3"
+description: Dialog-based surveys with an in-game editor and web reports.
+authors: [ MCCitiesNetwork ]
+
+permissions:
+  pollster.use:
+    description: Take surveys and open the survey list with /surveys.
+    default: true
+  pollster.admin:
+    description: Open the survey editor with /pollster.
+    default: op
+  pollster.admin.report:
+    description: View, export and publish survey reports.
+    default: op
+  pollster.admin.reload:
+    description: Reload Pollster's configuration and survey files.
+    default: op
+  pollster.survey.*:
+    description: >-
+      Take every survey that requires a permission. Each such survey checks its own node,
+      pollster.survey.<survey id>, which cannot be listed here because survey ids are chosen in game.
+    default: false
