@@ -37,9 +37,9 @@ class SurveyStoreTest {
                         new Reward.MessageReward("<green>Thanks"),
                         new Reward.TitleReward("Thanks", "for voting"),
                         new Reward.BroadcastReward("<gold>{player} voted")),
-                List.of(new Question("text", QuestionType.TEXT, "Why?", List.of(), false, 0, 0,
+                List.of(new Question("pick", QuestionType.SINGLE, "Pick one", opts, true, 0, 0, null),
+                        new Question("text", QuestionType.TEXT, "Why?", List.of(), false, 0, 0,
                                 "answer(pick) != \"a\""),
-                        new Question("pick", QuestionType.SINGLE, "Pick one", opts, true, 0, 0, null),
                         new Question("many", QuestionType.MULTIPLE, "Pick some", opts, false, 0, 2, null),
                         new Question("many2", QuestionType.MULTIPLE, "Pick more", opts, true, 1, 0, null),
                         new Question("yn", QuestionType.YES_NO, "Sure?", List.of(), true, 0, 0, null)));
@@ -129,7 +129,7 @@ class SurveyStoreTest {
         String text = Files.readString(this.dir.resolve("full-survey.yml"));
         String yesNoBlock = text.substring(text.indexOf("key: yn"));
         assertFalse(yesNoBlock.contains("options"), yesNoBlock);
-        String textBlock = text.substring(text.indexOf("key: text"), text.indexOf("key: pick"));
+        String textBlock = text.substring(text.indexOf("key: text"), text.indexOf("key: many"));
         assertFalse(textBlock.contains("options"), textBlock);
     }
 }
