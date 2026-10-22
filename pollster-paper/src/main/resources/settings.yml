@@ -1,0 +1,63 @@
+# Pollster settings.
+#
+# Durations are written as a number plus a unit: s (seconds), m (minutes), h (hours),
+# d (days), w (weeks). Units can be combined, for example 1d12h.
+# A value that cannot be read is reported in the server log and replaced by its default.
+#
+# Missing keys are added back, with their default value, each time the plugin loads. A pristine
+# copy of this file is kept in defaults/default-settings.yml for comparison.
+
+# The prompt that invites players to take the featured survey.
+featured:
+  # Show the prompt when a player joins and has not yet answered the featured survey.
+  on-join: true
+  # How long after joining the prompt appears. Gives the player time to load in.
+  delay: 3s
+  # How long to wait before asking the same player again if they dismiss the prompt.
+  cooldown: 24h
+
+# Reminders for players who started a survey and then stopped answering.
+reminders:
+  enabled: true
+  # How long a player can sit idle in a survey before the first reminder.
+  idle: 60s
+  # How long between further reminders. Use 0s to remind only once.
+  repeat: 300s
+
+# The longest free-text answer a player can submit, in characters. Must be above zero.
+# Longer answers are refused so one response cannot bloat the database or the report.
+text-max-length: 255
+
+# Sounds played at moments in the survey flow. Each has a sound key, a volume and a pitch.
+# Leave the key empty ("") to turn that sound off.
+sounds:
+  # A survey dialog opens.
+  open:
+    key: block.note_block.chime
+    volume: 1.0
+    pitch: 1.2
+  # The player moves to the next question.
+  next:
+    key: ui.button.click
+    volume: 0.6
+    pitch: 1.2
+  # The player's input was refused or a stale button was clicked.
+  error:
+    key: block.note_block.bass
+    volume: 1.0
+    pitch: 0.8
+  # The player submits their answers.
+  finish:
+    key: entity.player.levelup
+    volume: 1.0
+    pitch: 1.0
+
+# Publishing a survey report so it can be shared as a link.
+publishing:
+  # Service that stores the uploaded report data (a bytebin-compatible server).
+  paste-url: https://bytebin.lucko.me
+  # Web page that turns an uploaded report into a readable page.
+  viewer-url: https://mccitiesnetwork.github.io/pollster
+  # How long to wait for the paste service before giving up and telling the sender why.
+  # Must be above zero.
+  timeout: 10s
