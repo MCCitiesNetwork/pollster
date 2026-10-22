@@ -59,6 +59,22 @@ final class PlayerScreens {
         action.run();
     }
 
+    /**
+     * Like {@link #guarded}, but the button also belongs to one step of the flow. A second click
+     * on a screen the first click already moved past (a double click races the new dialog) just
+     * shows where the player is now instead of answering the next question too.
+     */
+    static void guardedStep(@NotNull PlayerUi ui, @NotNull PlayerSession session, @NotNull ScreenContext ctx,
+                            int step, @NotNull Runnable action) {
+        guarded(ui, session, ctx, () -> {
+            if (session.flow().step() != step) {
+                ctx.open(current(ui, session));
+                return;
+            }
+            action.run();
+        });
+    }
+
     /** The question the flow is on, or the review once every shown question is answered. */
     static @NotNull Screen current(@NotNull PlayerUi ui, @NotNull PlayerSession session) {
         return session.flow().current().isPresent()

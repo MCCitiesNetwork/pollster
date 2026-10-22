@@ -50,6 +50,8 @@ public final class QuestionScreen {
             return ReviewScreen.create(ui, session);
         }
         Question question = current.get();
+        // Every button acts only while the flow is still on the step this screen was built for.
+        int step = flow.step();
         Screen.Builder builder = Screen.builder(PlayerScreens.title(ui, flow.survey(), session.preview()));
         if (error != null) {
             builder.body(error);
@@ -69,16 +71,16 @@ public final class QuestionScreen {
                     Component label = option.key().equals(chosen)
                             ? Component.text("✔ " + option.label(), NamedTextColor.GREEN)
                             : Component.text(option.label(), NamedTextColor.WHITE);
-                    builder.button(Button.of(label, ctx -> submit(ui, session, ctx,
+                    builder.button(Button.of(label, ctx -> submit(ui, session, ctx, step,
                             new Answer.Choice(option.key()), null)));
                 }
             }
             case YES_NO -> {
                 builder.columns(2);
                 builder.button(Button.of(ui.style().primary("Yes"),
-                        ctx -> submit(ui, session, ctx, new Answer.Choice("yes"), null)));
+                        ctx -> submit(ui, session, ctx, step, new Answer.Choice("yes"), null)));
                 builder.button(Button.of(ui.style().danger("No"),
-                        ctx -> submit(ui, session, ctx, new Answer.Choice("no"), null)));
+                        ctx -> submit(ui, session, ctx, step, new Answer.Choice("no"), null)));
             }
             case MULTIPLE -> {
                 Set<String> selected = draft != null ? draft.selected()
@@ -97,7 +99,7 @@ public final class QuestionScreen {
                             ticked.add(options.get(i).key());
                         }
                     }
-                    submit(ui, session, ctx, new Answer.Choices(ticked), new Draft(null, ticked));
+                    submit(ui, session, ctx, step, new Answer.Choices(ticked), new Draft(null, ticked));
                 }));
             }
             case TEXT -> {
@@ -109,7 +111,7 @@ public final class QuestionScreen {
                 builder.button(Button.of(ui.style().primary("Next"), ctx -> {
                     String text = ctx.text(TEXT_KEY);
                     String value = text == null ? "" : text;
-                    submit(ui, session, ctx, new Answer.Text(value), new Draft(value, Set.of()));
+                    submit(ui, session, ctx, step, new Answer.Text(value), new Draft(value, Set.of()));
                 }));
             }
         }
@@ -117,14 +119,14 @@ public final class QuestionScreen {
         // Back only makes sense once there is an earlier shown question to return to.
         if (flow.position() > 1) {
             builder.button(Button.of(ui.style().secondary("Back"), ctx ->
-                    PlayerScreens.guarded(ui, session, ctx, () -> {
+                    PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                         flow.back();
                         ctx.open(PlayerScreens.current(ui, session));
                     })));
         }
         if (!question.required()) {
             builder.button(Button.of(ui.style().edit("Skip"), ctx ->
-                    PlayerScreens.guarded(ui, session, ctx, () -> {
+                    PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                         flow.skip();
                         ui.sounds().next(ctx.player());
                         ctx.open(PlayerScreens.current(ui, session));
@@ -133,9 +135,9 @@ public final class QuestionScreen {
         return builder.build();
     }
 
-    private static void submit(PlayerUi ui, PlayerSession session, ScreenContext ctx, Answer answer,
+    private static void submit(PlayerUi ui, PlayerSession session, ScreenContext ctx, int step, Answer answer,
                                @Nullable Draft draft) {
-        PlayerScreens.guarded(ui, session, ctx, () -> {
+        PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
             Question question = session.flow().current().orElse(null);
             AnswerResult result = session.flow().answer(answer);
             if (result instanceof AnswerResult.Invalid invalid && question != null) {

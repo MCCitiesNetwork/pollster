@@ -33,6 +33,7 @@ public final class ReviewScreen {
 
     public static @NotNull Screen create(@NotNull PlayerUi ui, @NotNull PlayerSession session) {
         SurveyDefinition survey = session.flow().survey();
+        int step = session.flow().step();
         Screen.Builder builder = Screen.builder(PlayerScreens.title(ui, survey, session.preview()));
         builder.body(ui.messages().messageFor(MessageKeys.SURVEY_REVIEW_INTRO));
         for (Map.Entry<String, Answer> entry : session.flow().answers().entrySet()) {
@@ -46,7 +47,7 @@ public final class ReviewScreen {
         }
         builder.button(new Button(ui.style().primary("Submit"), null, BUTTON_WIDTH, ctx -> submit(ui, session, ctx)));
         builder.button(new Button(ui.style().secondary("Back"), null, BUTTON_WIDTH, ctx ->
-                PlayerScreens.guarded(ui, session, ctx, () -> {
+                PlayerScreens.guardedStep(ui, session, ctx, step, () -> {
                     session.flow().back();
                     ctx.open(PlayerScreens.current(ui, session));
                 })));

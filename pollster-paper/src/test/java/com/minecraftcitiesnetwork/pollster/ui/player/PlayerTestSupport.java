@@ -118,6 +118,11 @@ final class PlayerTestSupport {
         return new Question(key, QuestionType.MULTIPLE, "Pick some " + key, list, true, min, max, null);
     }
 
+    static Question yesNo(String key) {
+        return new Question(key, QuestionType.YES_NO, "Agree " + key,
+                List.of(new Option("yes", "Yes"), new Option("no", "No")), true, 0, 0, null);
+    }
+
     static Question text(String key, boolean required) {
         return new Question(key, QuestionType.TEXT, "Say " + key, List.of(), required, 0, 0, null);
     }

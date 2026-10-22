@@ -37,6 +37,8 @@ public final class SurveyFlow {
     private final Map<String, Answer> given = new HashMap<>();
     /** Index into the question list; equals the question count while on the review screen. */
     private int cursor;
+    /** Counts every move (answer, skip, back) so a screen can tell it was built for an earlier step. */
+    private int step;
 
     public SurveyFlow(SurveyDefinition survey, Predicate<String> hasPermission, Instant startedAt) {
         this(survey, hasPermission, startedAt, DEFAULT_TEXT_MAX);
@@ -122,6 +124,7 @@ public final class SurveyFlow {
         for (int i = this.cursor - 1; i >= 0; i--) {
             if (visible.get(i)) {
                 this.cursor = i;
+                this.step++;
                 return true;
             }
         }
@@ -138,6 +141,14 @@ public final class SurveyFlow {
             }
         }
         return position;
+    }
+
+    /**
+     * How many moves the flow has made. A dialog captures it when built; a click that arrives after
+     * another click already moved the flow sees a different value and must not act again.
+     */
+    public int step() {
+        return this.step;
     }
 
     public int visibleCount() {
@@ -172,6 +183,7 @@ public final class SurveyFlow {
             }
         }
         this.cursor = nextVisibleAtOrAfter(this.cursor + 1);
+        this.step++;
     }
 
     private int nextVisibleAtOrAfter(int from) {

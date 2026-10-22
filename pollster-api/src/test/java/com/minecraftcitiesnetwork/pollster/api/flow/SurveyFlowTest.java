@@ -170,4 +170,18 @@ class SurveyFlowTest {
         assertEquals(2, flow.position());
         assertEquals(2, flow.visibleCount());
     }
+
+    @Test
+    void step_advancesOnEveryMoveButNotOnRefusal() {
+        SurveyFlow flow = flow(single("q1", null), text("q2", false));
+        int start = flow.step();
+        flow.answer(new Answer.Text("wrong type"));
+        assertEquals(start, flow.step());
+        flow.answer(choice("a"));
+        assertEquals(start + 1, flow.step());
+        flow.skip();
+        assertEquals(start + 2, flow.step());
+        flow.back();
+        assertEquals(start + 3, flow.step());
+    }
 }

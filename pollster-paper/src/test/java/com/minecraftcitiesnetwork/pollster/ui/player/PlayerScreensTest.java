@@ -26,6 +26,7 @@ import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.pl
 import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.single;
 import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.survey;
 import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.text;
+import static com.minecraftcitiesnetwork.pollster.ui.player.PlayerTestSupport.yesNo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -231,6 +232,45 @@ class PlayerScreensTest {
         SurveyDefinition s = open("prev-one", single("a", 2, true));
         PlayerSession session = this.t.start(s, true);
         assertTrue(plain(QuestionScreen.create(this.t.ui, session, null).title()).contains("PREVIEW"));
+    }
+
+    @Test
+    void question_doubleClickAnswersOnlyOnce() {
+        SurveyDefinition s = open("dbl-yes", yesNo("a"), yesNo("b"));
+        PlayerSession session = this.t.start(s, false);
+        var ctx = this.t.context();
+        var yes = button(QuestionScreen.create(this.t.ui, session, null), "Yes");
+        yes.onClick().accept(ctx);
+        yes.onClick().accept(ctx);
+        assertEquals(1, session.flow().answers().size());
+        assertEquals("b", session.flow().current().orElseThrow().key());
+        assertTrue(body(ctx.last()).contains("Question 2 of 2"));
+    }
+
+    @Test
+    void question_doubleClickBackStepsOnce() {
+        SurveyDefinition s = open("dbl-back", single("a", 2, true), single("b", 2, true), single("c", 2, true));
+        PlayerSession session = this.t.start(s, false);
+        session.flow().answer(new Answer.Choice("o0"));
+        session.flow().answer(new Answer.Choice("o0"));
+        var ctx = this.t.context();
+        var back = button(QuestionScreen.create(this.t.ui, session, null), "Back");
+        back.onClick().accept(ctx);
+        back.onClick().accept(ctx);
+        assertEquals("b", session.flow().current().orElseThrow().key());
+    }
+
+    @Test
+    void review_doubleClickBackStepsOnce() {
+        SurveyDefinition s = open("dbl-rev", single("a", 2, true), single("b", 2, true));
+        PlayerSession session = this.t.start(s, false);
+        session.flow().answer(new Answer.Choice("o0"));
+        session.flow().answer(new Answer.Choice("o0"));
+        var ctx = this.t.context();
+        var back = button(ReviewScreen.create(this.t.ui, session), "Back");
+        back.onClick().accept(ctx);
+        back.onClick().accept(ctx);
+        assertEquals("b", session.flow().current().orElseThrow().key());
     }
 
     // --- review -------------------------------------------------------------------------
