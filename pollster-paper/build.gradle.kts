@@ -1,8 +1,11 @@
+import me.drownek.plugwright.local.LocalMode
+
 plugins {
     `java-library`
     `pollster-conventions`
     id("xyz.jpenilla.run-paper") version "3.0.2"
     id("com.gradleup.shadow") version "9.3.1"
+    id("io.github.drownek.plugwright") version "3.0.0"
 }
 
 dependencies {
@@ -33,6 +36,15 @@ val devDbConfigFile = layout.projectDirectory.file("run/plugins/Pollster/databas
 val devDbUrl = "mariadb://localhost:3306/pollster"
 val devDbUser = "pollster"
 val devDbPassword = "pollster"
+// The database.yml both the runServer server and the plugwright test server get.
+val devDbYaml = """
+        url: '$devDbUrl'
+        username: '$devDbUser'
+        password: '$devDbPassword'
+        """.trimIndent() + "\n"
+
+// The Paper version runServer and the plugwright test server run.
+val serverMinecraftVersion = "26.3"
 
 // Builds a `docker compose` command line. Deliberately a PURE function returning a
 // list: a task action defined inside a script-level function captures the script
@@ -57,8 +69,7 @@ val startDevDb = tasks.register<Exec>("startDevDb") {
     val hint = dockerHint
     val configFile = devDbConfigFile
     val url = devDbUrl
-    val user = devDbUser
-    val password = devDbPassword
+    val yaml = devDbYaml
     doLast {
         val exit = result.get().exitValue
         if (exit != 0) {
@@ -74,13 +85,7 @@ val startDevDb = tasks.register<Exec>("startDevDb") {
             logger.lifecycle("Dev database up; leaving existing ${configFile.name} untouched.")
         } else {
             configFile.parentFile.mkdirs()
-            configFile.writeText(
-                    """
-                    url: '$url'
-                    username: '$user'
-                    password: '$password'
-                    """.trimIndent() + System.lineSeparator()
-            )
+            configFile.writeText(yaml)
             logger.lifecycle("Dev database up; wrote ${configFile.name} pointing at $url")
         }
     }
@@ -157,6 +162,56 @@ tasks {
 
     runServer {
         dependsOn(startDevDb)
-        minecraftVersion("26.3")
+        minecraftVersion(serverMinecraftVersion)
     }
+}
+
+// --- Live-server tests (plugwright) ------------------------------------------------
+//
+// A separate task: never wired into test, check or build. Run with
+// `./gradlew :pollster-paper:plugwrightTest`. Needs Docker (for the dev MariaDB) and Node.js.
+//
+// The server runs Paper 26.3. The bots connect as Minecraft 1.21.11 clients and ViaVersion
+// plus ViaBackwards translate; see src/test/e2e/plugins/test-server.ts.
+
+plugwright {
+    testsDir.set(file("src/test/e2e"))
+
+    environments {
+        create("local", LocalMode) {
+            minecraftVersion.set(serverMinecraftVersion)
+            acceptEula.set(true)
+            writeFiles {
+                // The generated server starts with its whitelist on, and the bots are not on it.
+                file("server.properties", "white-list=false\n")
+                // The same MariaDB as runServer (compose.dev.yml). Specs use a fresh survey id
+                // per test, so responses left over from earlier runs never collide.
+                file("plugins/Pollster/database.yml", devDbYaml)
+                // Short timers so the reminder and featured specs finish in seconds. Pollster adds
+                // every other setting back with its default.
+                file("plugins/Pollster/settings.yml", """
+                    featured:
+                      delay: 1s
+                    reminders:
+                      idle: 2s
+                      repeat: 0s
+                """.trimIndent() + "\n")
+            }
+            downloadPlugins {
+                url("https://cdn.modrinth.com/data/P1OZGk5p/versions/Fkfcr89K/ViaVersion-5.12.2.jar")
+                url("https://cdn.modrinth.com/data/NpvuJQoq/versions/WFO37e8T/ViaBackwards-5.12.2.jar")
+            }
+            plugins { local("test-server") }
+        }
+    }
+}
+
+// Plugwright registers its tasks late, so match by name instead of tasks.named(...).
+tasks.matching { it.name == "plugwrightProvisionLocal" }.configureEach {
+    dependsOn(startDevDb)
+}
+
+// Plugwright 3.0.0's tasks keep a Project reference, which the configuration cache cannot store.
+tasks.matching { it.name.startsWith("plugwright") }.configureEach {
+    notCompatibleWithConfigurationCache("plugwright 3.0.0 tasks hold a Project reference")
 }
