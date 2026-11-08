@@ -37,13 +37,13 @@ public final class CreateWizard {
             builder.body(error);
         }
         return builder
-                .input(new Input.TextInput("id", Component.text(t(ui, EDITOR_WIZARD_ID_INPUT)), draft.id(),
+                .input(new Input.TextInput("survey_id", Component.text(t(ui, EDITOR_WIZARD_ID_INPUT)), draft.id(),
                         SurveyIds.MAX_LENGTH, false))
                 .input(new Input.TextInput("name", Component.text(t(ui, EDITOR_LABEL_NAME)), draft.name(), NAME_MAX, false))
                 .input(new Input.TextInput("description", Component.text(t(ui, EDITOR_LABEL_DESCRIPTION)), draft.description(),
                         DESCRIPTION_MAX, true))
                 .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_NEXT)), ctx -> {
-                    Draft entered = new Draft(trimmed(ctx.text("id")), trimmed(ctx.text("name")),
+                    Draft entered = new Draft(trimmed(ctx.text("survey_id")), trimmed(ctx.text("name")),
                             trimmed(ctx.text("description")), draft.anonymous(), draft.featured(),
                             draft.requiresPermission());
                     Component problem = problem(ui, entered);
@@ -60,7 +60,7 @@ public final class CreateWizard {
                         draft.anonymous()))
                 .input(new Input.BoolInput("featured", Component.text(t(ui, EDITOR_WIZARD_FEATURED_INPUT)),
                         draft.featured()))
-                .input(new Input.BoolInput("requires-permission", Component.text(t(ui, EDITOR_LABEL_REQUIRES_PERMISSION)),
+                .input(new Input.BoolInput("requires_permission", Component.text(t(ui, EDITOR_LABEL_REQUIRES_PERMISSION)),
                         draft.requiresPermission()))
                 .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_NEXT)), ctx -> ctx.open(confirm(ui, withSettings(draft, ctx)))))
                 .button(Button.of(ui.style().secondary(t(ui, EDITOR_COMMON_BACK)), ctx -> ctx.open(basics(ui, withSettings(draft, ctx), null))))
@@ -119,7 +119,7 @@ public final class CreateWizard {
     private static Draft withSettings(Draft draft, ScreenContext ctx) {
         return new Draft(draft.id(), draft.name(), draft.description(),
                 Boolean.TRUE.equals(ctx.bool("anonymous")), Boolean.TRUE.equals(ctx.bool("featured")),
-                Boolean.TRUE.equals(ctx.bool("requires-permission")));
+                Boolean.TRUE.equals(ctx.bool("requires_permission")));
     }
 
     private static String trimmed(@Nullable String s) {

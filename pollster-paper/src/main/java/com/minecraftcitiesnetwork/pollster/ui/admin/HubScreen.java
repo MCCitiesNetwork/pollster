@@ -268,10 +268,10 @@ public final class HubScreen {
         if (error != null) {
             b.body(error);
         }
-        return b.input(new Input.TextInput("id", Component.text(t(ui, EDITOR_COMMON_NEW_ID)), "",
+        return b.input(new Input.TextInput("survey_id", Component.text(t(ui, EDITOR_COMMON_NEW_ID)), "",
                         SurveyIds.MAX_LENGTH, false))
                 .button(Button.of(ui.style().primary(t(ui, EDITOR_COMMON_CREATE)), ctx -> {
-                    String newId = ctx.text("id") == null ? "" : ctx.text("id").strip();
+                    String newId = ctx.text("survey_id") == null ? "" : ctx.text("survey_id").strip();
                     if (!SurveyIds.isValidSlug(newId)) {
                         ctx.open(duplicate(ui, sourceId, ui.style()
                                 .error(t(ui, EDITOR_COMMON_ID_INVALID))));

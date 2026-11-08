@@ -46,4 +46,11 @@ class ScreenTest {
                 List.of(Map.entry("a", Component.text("A"))), "a");
         assertEquals(1, input.options().size());
     }
+
+    @Test
+    void input_rejectsKeysPaperCannotRender() {
+        // Paper refuses any dialog input key outside [a-zA-Z0-9_]+ when the dialog is built.
+        assertThrows(IllegalArgumentException.class,
+                () -> new Input.BoolInput("requires-permission", Component.text("K"), false));
+    }
 }

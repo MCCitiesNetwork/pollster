@@ -30,6 +30,12 @@ public final class DialogRenderer {
     private static final int INPUT_WIDTH = 300;
     private static final int MULTILINE_LINES = 6;
     private static final int MULTILINE_HEIGHT = 100;
+    /**
+     * Put in front of every input key sent to the client. Paper keeps each button's callback id
+     * under "id" in the click payload and the client writes input values over it, so an unprefixed
+     * "id" input would stop every button on its screen from firing.
+     */
+    private static final String KEY_PREFIX = "in_";
 
     private final ClickCallback.Options clickOptions = ClickCallback.Options.builder()
             .uses(ClickCallback.UNLIMITED_USES)
@@ -87,10 +93,15 @@ public final class DialogRenderer {
         });
     }
 
+    /** The key an input is sent to the client under; see {@link #KEY_PREFIX}. */
+    static @NotNull String dialogKey(@NotNull String key) {
+        return KEY_PREFIX + key;
+    }
+
     private static @NotNull DialogInput toDialogInput(@NotNull Input input) {
         return switch (input) {
             case Input.TextInput t -> {
-                TextDialogInput.Builder builder = DialogInput.text(t.key(), t.label())
+                TextDialogInput.Builder builder = DialogInput.text(dialogKey(t.key()), t.label())
                         .width(INPUT_WIDTH)
                         .initial(t.initial())
                         .maxLength(t.maxLength());
@@ -99,7 +110,7 @@ public final class DialogRenderer {
                 }
                 yield builder.build();
             }
-            case Input.BoolInput b -> DialogInput.bool(b.key(), b.label())
+            case Input.BoolInput b -> DialogInput.bool(dialogKey(b.key()), b.label())
                     .initial(b.initial())
                     .onTrue("true")
                     .onFalse("false")
@@ -110,12 +121,12 @@ public final class DialogRenderer {
                     entries.add(SingleOptionDialogInput.OptionEntry.create(option.getKey(), option.getValue(),
                             option.getKey().equals(c.initialKey())));
                 }
-                yield DialogInput.singleOption(c.key(), c.label(), entries)
+                yield DialogInput.singleOption(dialogKey(c.key()), c.label(), entries)
                         .width(INPUT_WIDTH)
                         .labelVisible(true)
                         .build();
             }
-            case Input.RangeInput r -> DialogInput.numberRange(r.key(), r.label(), r.min(), r.max())
+            case Input.RangeInput r -> DialogInput.numberRange(dialogKey(r.key()), r.label(), r.min(), r.max())
                     .width(INPUT_WIDTH)
                     .initial(r.initial())
                     .step(r.step())
@@ -139,17 +150,17 @@ public final class DialogRenderer {
 
         @Override
         public @Nullable String text(@NotNull String key) {
-            return this.response == null ? null : this.response.getText(key);
+            return this.response == null ? null : this.response.getText(dialogKey(key));
         }
 
         @Override
         public @Nullable Boolean bool(@NotNull String key) {
-            return this.response == null ? null : this.response.getBoolean(key);
+            return this.response == null ? null : this.response.getBoolean(dialogKey(key));
         }
 
         @Override
         public @Nullable Float number(@NotNull String key) {
-            return this.response == null ? null : this.response.getFloat(key);
+            return this.response == null ? null : this.response.getFloat(dialogKey(key));
         }
 
         @Override

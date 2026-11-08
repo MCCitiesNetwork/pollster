@@ -25,10 +25,10 @@ class CreateWizardTest {
     @Test
     void basics_rejectsBadSlug() {
         AdminFixture f = new AdminFixture(this.dir);
-        AdminFixture.FakeContext ctx = f.context().text("id", "Bad Id!").text("name", "N").text("description", "D");
+        AdminFixture.FakeContext ctx = f.context().text("survey_id", "Bad Id!").text("name", "N").text("description", "D");
         button(CreateWizard.basics(f.ui, EMPTY, null), "Next").onClick().accept(ctx);
         Screen s = ctx.last();
-        assertTrue(s.inputs().stream().anyMatch(i -> i.key().equals("id")), "back on basics");
+        assertTrue(s.inputs().stream().anyMatch(i -> i.key().equals("survey_id")), "back on basics");
         assertTrue(plain(s).contains("Survey id"), plain(s));
         assertEquals("Bad Id!", ((Input.TextInput) s.inputs().get(0)).initial());
     }
@@ -37,7 +37,7 @@ class CreateWizardTest {
     void basics_rejectsExistingId() {
         AdminFixture f = new AdminFixture(this.dir);
         f.survey("taken-id", SurveyStatus.DRAFT);
-        AdminFixture.FakeContext ctx = f.context().text("id", "taken-id").text("name", "N").text("description", "D");
+        AdminFixture.FakeContext ctx = f.context().text("survey_id", "taken-id").text("name", "N").text("description", "D");
         button(CreateWizard.basics(f.ui, EMPTY, null), "Next").onClick().accept(ctx);
         assertTrue(plain(ctx.last()).contains("already exists"), plain(ctx.last()));
     }
@@ -45,13 +45,13 @@ class CreateWizardTest {
     @Test
     void basics_validInputGoesToSettingsAndBackKeepsDraft() {
         AdminFixture f = new AdminFixture(this.dir);
-        AdminFixture.FakeContext ctx = f.context().text("id", "new-poll").text("name", "N").text("description", "D");
+        AdminFixture.FakeContext ctx = f.context().text("survey_id", "new-poll").text("name", "N").text("description", "D");
         button(CreateWizard.basics(f.ui, EMPTY, null), "Next").onClick().accept(ctx);
         Screen settings = ctx.last();
         assertEquals(3, settings.inputs().size());
         ctx.bools.put("anonymous", true);
         ctx.bools.put("featured", false);
-        ctx.bools.put("requires-permission", true);
+        ctx.bools.put("requires_permission", true);
         button(settings, "Back").onClick().accept(ctx);
         assertEquals("new-poll", ((Input.TextInput) ctx.last().inputs().get(0)).initial());
     }

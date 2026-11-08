@@ -151,8 +151,8 @@ class HubScreenTest {
         AdminFixture f = new AdminFixture(this.dir);
         AdminFixture.FakeContext ctx = f.context();
         button(hub(f, valid(f, "poll-open", SurveyStatus.OPEN), 0), "Duplicate").onClick().accept(ctx);
-        assertTrue(ctx.last().inputs().stream().anyMatch(i -> i.key().equals("id")));
-        ctx.text("id", "poll-copy");
+        assertTrue(ctx.last().inputs().stream().anyMatch(i -> i.key().equals("survey_id")));
+        ctx.text("survey_id", "poll-copy");
         button(ctx.last(), "Create").onClick().accept(ctx);
         SurveyDefinition copy = f.store.get("poll-copy").orElseThrow();
         assertEquals(SurveyStatus.DRAFT, copy.status());
@@ -164,7 +164,7 @@ class HubScreenTest {
         AdminFixture f = new AdminFixture(this.dir);
         AdminFixture.FakeContext ctx = f.context();
         button(hub(f, valid(f, "poll-open", SurveyStatus.OPEN), 0), "Duplicate").onClick().accept(ctx);
-        ctx.text("id", "poll-open");
+        ctx.text("survey_id", "poll-open");
         button(ctx.last(), "Create").onClick().accept(ctx);
         assertTrue(plain(ctx.last()).contains("already exists"), plain(ctx.last()));
     }
